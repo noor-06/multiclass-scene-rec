@@ -155,7 +155,6 @@
             border-radius: 12px;
             border: 1px solid var(--border-color);
             padding: 20px;
-            /* THIS IS THE MAGIC FIX TO STOP THE GLOBE FROM BREAKING THE GRID */
             min-width: 0; 
             display: flex;
             flex-direction: column;
@@ -179,7 +178,7 @@
         }
 
         .globe-placeholder {
-            height: 400px;
+            height: 500px; /* Made slightly taller to fit the legends */
             background: #0B1120;
             border-radius: 8px;
             position: relative;
@@ -188,25 +187,50 @@
             flex-grow: 1;
         }
 
-        .globe-controls {
+        /* Floating Globe Controls & Legends */
+        .globe-floating-panel {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.95);
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 16px;
+            border-radius: 12px;
             color: #333;
             z-index: 10;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        .globe-controls p { margin: 4px 0; font-weight: 500;}
+
+        /* Top Right Controls */
+        .globe-controls {
+            top: 20px;
+            right: 20px;
+            font-size: 0.8rem;
+        }
+        .globe-controls p { margin: 6px 0; color: #4b5563; }
+        .panel-title { font-weight: 600; margin-bottom: 10px; font-size: 0.9rem; color: #1f2937; }
+
+        /* Bottom Left Legend */
+        .globe-legend {
+            bottom: 20px;
+            left: 20px;
+            min-width: 220px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #4b5563;
+        }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .dot.red { background: #ef4444; }
+        .dot.yellow { background: #eab308; }
+        .dot.green { background: #10b981; }
+        
+        .globe-legend hr { border: 0; border-top: 1px solid #e5e7eb; margin: 12px 0; }
+        .legend-subtext { font-size: 0.75rem; color: #6b7280; margin-top: 5px;}
 
         /* Activity List */
-        .activity-list {
-            overflow-y: auto;
-        }
-        
+        .activity-list { overflow-y: auto; }
         .activity-item {
             display: flex;
             gap: 12px;
@@ -311,11 +335,23 @@
                 <div class="globe-placeholder" id="globe-container">
                     <div id="globeViz"></div>
                     
-                    <div class="globe-controls">
-                        <p>👆 Drag to rotate</p>
+                    <div class="globe-floating-panel globe-controls">
+                        <p class="panel-title">Controls</p>
+                        <p>🖱️ Drag to rotate</p>
                         <p>🔍 Scroll to zoom</p>
+                        <p>👆 Click marker to select</p>
+                    </div>
+
+                    <div class="globe-floating-panel globe-legend">
+                        <p class="panel-title">Monitoring Regions</p>
+                        <div class="legend-item"><span class="dot red"></span> High Activity (5)</div>
+                        <div class="legend-item"><span class="dot yellow"></span> Medium Activity (6)</div>
+                        <div class="legend-item"><span class="dot green"></span> Low Activity (5)</div>
+                        <hr>
+                        <p class="legend-subtext">Click on any location to zoom in and view details</p>
                     </div>
                 </div>
+
             </div>
 
             <div class="section-card">
@@ -366,32 +402,37 @@
             
             // Your research project coordinates
             const analysisRegions = [
-                { lat: -28.4793, lng: 24.6727, label: 'South Africa (fMoW)', color: '#10b981' },
-                { lat: 35.8617, lng: 104.1954, label: 'China (MLRSNet)', color: '#ef4444' }
+                { lat: -28.4793, lng: 24.6727, label: 'South Africa', color: '#ef4444' }, // Red (High Activity)
+                { lat: 35.8617, lng: 104.1954, label: 'China', color: '#10b981' }, // Green (Low Activity)
+                { lat: -33.9249, lng: 18.4241, label: 'Cape Town', color: '#eab308' } // Yellow (Medium)
             ];
 
             try {
                 // Initialize the Globe
                 const world = Globe()
                     (container)
-                    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
-                    .backgroundColor('#0B1120')
-                    .width(wrapper.clientWidth) // Grabs the exact width of the box
-                    .height(400)
+                    // Added Realistic Satellite Imagery and Starry Background
+                    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+                    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+                    .width(wrapper.clientWidth)
+                    .height(500)
                     .labelsData(analysisRegions)
                     .labelLat(d => d.lat)
                     .labelLng(d => d.lng)
                     .labelText(d => d.label)
                     .labelSize(1.5)
-                    .labelDotRadius(0.8)
+                    .labelDotRadius(1)
                     .labelColor(d => d.color)
                     .labelResolution(2);
+
+                // Add the green atmosphere glow
+                world.atmosphereColor('#10b981');
+                world.atmosphereAltitude(0.15);
 
                 world.controls().autoRotate = true;
                 world.controls().autoRotateSpeed = 0.8;
                 world.pointOfView({ lat: 5, lng: 65, altitude: 2.2 });
                 
-                // This prevents the globe from staying huge if the window shrinks
                 const resizeObserver = new ResizeObserver(() => {
                     world.width(wrapper.clientWidth);
                 });
