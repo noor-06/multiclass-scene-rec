@@ -1,1 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Analysis - TerraSustain Monitor</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-light: #ecfdf5;
+            --primary-dark: #059669;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --red: #ef4444;
+            --red-bg: #fef2f2;
+            --yellow: #f59e0b;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+        }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-color); color: var(--text-dark); min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* ── Nav ── */
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); padding: 12px 30px;
+            border-bottom: 1px solid var(--border-color); z-index: 1000; flex-shrink: 0;
+            position: sticky;
+            top: 0;
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-text h1 { font-size: 1.1rem; color: #0f172a; font-weight: 600; }
+        .logo-text p { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 6px; text-decoration: none;
+            color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+            padding: 8px 12px; border-radius: 6px; transition: all 0.2s;
+        }
+        .nav-links a.active { color: var(--primary); background: var(--primary-light); }
+        .nav-links svg { width: 16px; height: 16px; }
+
+        /* ── Page ── */
+        .page-body { flex: 1; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+
+        .page-header h2 { font-size: 1.35rem; font-weight: 700; }
+        .page-header p { font-size: 0.85rem; color: var(--text-muted); margin-top: 3px; }
+
+        /* ── Stepper ── */
+        .stepper {
+            display: flex; align-items: center; gap: 0;
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 16px 24px;
+        }
+        .step {
+            display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer;
+        }
+        .step-num {
+            width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+            border: 2px solid var(--border-color); color: var(--text-muted); transition: all 0.3s;
+        }
+        .step.active .step-num { background: var(--primary); border-color: var(--primary); color: white; }
+        .step.done .step-num { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+        .step-text strong { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-dark); }
+        .step-text span { font-size: 0.75rem; color: var(--text-muted); }
+        .step.active .step-text strong { color: var(--primary); }
+        .step-connector { flex: 1; height: 2px; background: var(--border-color); margin: 0 12px; max-width: 60px; transition: background 0.3s; }
+        .step-connector.done { background: var(--primary); }
+
+        /* ── Main grid ── */
+        .main-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
+
+        /* ── Card ── */
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+        .card-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 14px; }
+
+        /* ── Upload zone ── */
+        .upload-zone {
+            border: 2px dashed var(--border-color); border-radius: 12px;
+            padding: 48px 20px; text-align: center; cursor: pointer;
+            transition: all 0.25s; position: relative; background: var(--bg-color);
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary); background: var(--primary-light);
+        }
+        .upload-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .upload-icon {
+            width: 56px; height: 56px; background: var(--primary-light); border-radius: 14px;
+            display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: var(--primary);
+        }
+        .upload-icon svg { width: 28px; height: 28px; }
+        .upload-zone h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+        .upload-zone p { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; }
+        .upload-zone .formats { font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; }
+
+        .choose-btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            background: var(--primary); color: white; border: none;
+            padding: 10px 20px; border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; pointer-events: none;
+        }
+        .choose-btn svg { width: 15px; height: 15px; }
+
+        /* ── File list ── */
+        .file-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+        .file-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px; background: var(--bg-color); border-radius: 8px; border: 1px solid var(--border-color);
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .file-thumb {
+            width: 40px; height: 40px; border-radius: 6px; background: #1e293b;
+            overflow: hidden; flex-shrink: 0; position: relative;
+        }
+        .file-thumb canvas { width: 100%; height: 100%; }
+        .file-info { flex: 1; min-width: 0; }
+        .file-name { font-size: 0.83rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        .file-status { padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; flex-shrink: 0; }
+        .file-status.ready { background: var(--primary-light); color: var(--primary); }
+        .file-status.processing { background: #fffbeb; color: var(--yellow); }
+        .file-status.done { background: var(--primary-light); color: var(--primary); }
+        .file-remove { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 4px; transition: all 0.2s; }
+        .file-remove:hover { background: var(--red-bg); color: var(--red); }
+        .file-remove svg { width: 14px; height: 14px; }
+
+        /* ── Progress bar ── */
+        .upload-progress { height: 4px; background: var(--border-color); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        .upload-progress-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.4s ease; }
+
+        /* ── Location form ── */
+        .location-form { display: flex; flex-direction: column; gap: 14px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; }
+        .form-control {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+            border-radius: 8px; font-size: 0.85rem; color: var(--text-dark);
+            outline: none; background: var(--bg-color); transition: border 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); }
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 12px center;
+        }
+
+        /* coordinate inputs */
+        .coord-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* ── Analyse options ── */
+        .analysis-options { display: flex; flex-direction: column; gap: 8px; }
+        .analysis-option {
+            display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+            border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .analysis-option:hover { border-color: var(--primary); background: var(--primary-light); }
+        .analysis-option.selected { border-color: var(--primary); background: var(--primary-light); }
+        .analysis-option input[type="radio"] { accent-color: var(--primary); width: 15px; height: 15px; flex-shrink: 0; }
+        .option-text strong { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-dark); }
+        .option-text span { font-size: 0.75rem; color: var(--text-muted); }
+        .analysis-option.selected .option-text strong { color: var(--primary); }
+
+        /* ── Baseline compare ── */
+        .baseline-wrap { display: flex; gap: 10px; align-items: center; margin-top: 2px; }
+        .baseline-wrap .form-control { flex: 1; }
+
+        /* ── Action buttons ── */
+        .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+        .btn-primary {
+            flex: 1; background: var(--primary); color: white; border: none;
+            padding: 12px; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            gap: 8px; transition: background 0.2s;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-primary:disabled { background: var(--border-color); color: var(--text-muted); cursor: not-allowed; }
+        .btn-secondary {
+            background: white; color: var(--text-dark); border: 1px solid var(--border-color);
+            padding: 12px 18px; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary svg, .btn-secondary svg { width: 16px; height: 16px; }
+
+        /* ── Right panel ── */
+        .right-panel { display: flex; flex-direction: column; gap: 16px; }
+
+        /* ── Recent uploads ── */
+        .recent-item {
+            display: flex; gap: 12px; align-items: center; padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color); margin-bottom: 4px;
+        }
+        .recent-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+        .recent-thumb {
+            width: 46px; height: 46px; border-radius: 8px; overflow: hidden;
+            flex-shrink: 0; background: #1e293b;
+        }
+        .recent-thumb canvas { width: 100%; height: 100%; }
+        .recent-info { flex: 1; min-width: 0; }
+        .recent-name { font-size: 0.83rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .recent-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        .recent-badge { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+
+        /* ── Result card ── */
+        .result-card-inner { display: flex; flex-direction: column; gap: 12px; }
+        .result-section-title { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 8px; }
+        .result-tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .result-tag { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1.5px solid; }
+
+        .conf-bar-wrap { margin-top: 4px; }
+        .conf-label-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
+        .conf-label-row span:last-child { font-weight: 700; color: var(--primary); }
+        .conf-track { height: 6px; background: var(--border-color); border-radius: 3px; }
+        .conf-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--primary), #34d399); transition: width 1.2s ease; }
+
+        .result-stat-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; }
+        .result-stat-row:last-child { border-bottom: none; }
+        .result-stat-row span:first-child { color: var(--text-muted); }
+        .result-stat-row span:last-child { font-weight: 600; }
+
+        /* ── Tips card ── */
+        .tip-item { display: flex; gap: 10px; margin-bottom: 12px; }
+        .tip-item:last-child { margin-bottom: 0; }
+        .tip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 6px; }
+        .tip-item p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+
+        /* ── Loading overlay ── */
+        .processing-overlay {
+            position: fixed; inset: 0; background: rgba(15,23,42,0.7);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            backdrop-filter: blur(4px);
+        }
+        .processing-overlay.visible { opacity: 1; pointer-events: all; }
+        .processing-box {
+            background: white; border-radius: 16px; padding: 36px 48px;
+            text-align: center; max-width: 380px;
+        }
+        .proc-spinner { width: 52px; height: 52px; border: 3px solid rgba(16,185,129,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.9s linear infinite; margin: 0 auto 16px; }
+        .proc-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+        .proc-step { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px; }
+        .proc-bar-track { height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; }
+        .proc-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.5s ease; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* toast */
+        .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text-dark); color: white; padding: 12px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 8px; z-index: 9999; transform: translateY(70px); opacity: 0; transition: all 0.3s; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast svg { width: 15px; height: 15px; color: var(--primary); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<header class="top-nav">
+    <div class="logo-area">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="#0EA5E9"/><path d="M12 10V26M18 10V26M24 10V26" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M9 14C11.5 12 14.5 16 18 14C21.5 12 24.5 16 27 14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="logo-text">
+            <h1>TerraSustain Monitor</h1>
+            <p>Land Use Intelligence Platform</p>
+        </div>
+    </div>
+    <nav class="nav-links">
+        <a href="index.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>Dashboard</a>
+        <a href="interactive-analysis.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>Interactive Analysis</a>
+        <a href="change-detection.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>Change Detection</a>
+        <a href="reporting.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Reporting</a>
+        <a href="user-analysis.html" class="active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>User Analysis</a>
+    </nav>
+</header>
+
+<div class="page-body">
+    <div class="page-header">
+        <h2>User Image Analysis &amp; Comparison</h2>
+        <p>Upload your own imagery for land-use classification and comparison</p>
+    </div>
+
+    <!-- Stepper -->
+    <div class="stepper">
+        <div class="step active" id="step1">
+            <div class="step-num" id="sn1">1</div>
+            <div class="step-text"><strong>Upload Image</strong><span>Satellite or aerial imagery</span></div>
+        </div>
+        <div class="step-connector" id="sc1"></div>
+        <div class="step" id="step2">
+            <div class="step-num" id="sn2">2</div>
+            <div class="step-text"><strong>Set Location</strong><span>Coordinates or region name</span></div>
+        </div>
+        <div class="step-connector" id="sc2"></div>
+        <div class="step" id="step3">
+            <div class="step-num" id="sn3">3</div>
+            <div class="step-text"><strong>Analyze &amp; Compare</strong><span>Run classification and compare</span></div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+
+        <!-- ── Left: Workflow ── -->
+        <div style="display:flex;flex-direction:column;gap:16px;">
+
+            <!-- Step 1: Upload -->
+            <div class="card" id="cardUpload">
+                <div class="card-title">Step 1 — Upload Image</div>
+                <div class="upload-zone" id="uploadZone"
+                    ondragover="event.preventDefault();this.classList.add('dragover')"
+                    ondragleave="this.classList.remove('dragover')"
+                    ondrop="handleDrop(event)">
+                    <input type="file" accept=".tif,.tiff,.png,.jpg,.jpeg" multiple onchange="handleFiles(this.files)">
+                    <div class="upload-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </div>
+                    <h3>Upload Your Satellite or Aerial Image</h3>
+                    <p>Drag and drop files here, or click to browse</p>
+                    <div class="choose-btn">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Choose File
+                    </div>
+                    <p class="formats">Supported: TIFF, GeoTIFF, PNG, JPEG &nbsp;·&nbsp; Max file size: 50 MB</p>
+                </div>
+
+                <div class="file-list" id="fileList"></div>
+            </div>
+
+            <!-- Step 2: Location -->
+            <div class="card" id="cardLocation" style="opacity:0.55;pointer-events:none;transition:opacity 0.3s">
+                <div class="card-title">Step 2 — Set Location</div>
+                <div class="location-form">
+                    <div class="form-group">
+                        <label>Region Name (optional)</label>
+                        <input type="text" class="form-control" id="regionName" placeholder="e.g., Northern Johannesburg Suburbs">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Country / Dataset</label>
+                            <select class="form-control" id="datasetSelect">
+                                <option value="zaf">South Africa (fMoW)</option>
+                                <option value="chn">China (MLRSNet)</option>
+                                <option value="auto">Auto-detect</option>
+                                <option value="other">Other (Global)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Image Date</label>
+                            <input type="date" class="form-control" id="imgDate" value="2024-11-20">
+                        </div>
+                    </div>
+                    <div class="coord-row">
+                        <div class="form-group">
+                            <label>Latitude</label>
+                            <input type="text" class="form-control" placeholder="e.g., -26.2041" id="latInput">
+                        </div>
+                        <div class="form-group">
+                            <label>Longitude</label>
+                            <input type="text" class="form-control" placeholder="e.g., 28.0473" id="lngInput">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Compare with Baseline (optional)</label>
+                        <div class="baseline-wrap">
+                            <input type="date" class="form-control" placeholder="Baseline date">
+                            <select class="form-control" style="max-width:160px">
+                                <option>Select region</option>
+                                <option>Johannesburg 2020</option>
+                                <option>Cape Town 2020</option>
+                                <option>Beijing 2020</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Analysis Options -->
+            <div class="card" id="cardAnalysis" style="opacity:0.55;pointer-events:none;transition:opacity 0.3s">
+                <div class="card-title">Step 3 — Analysis Options</div>
+                <div class="analysis-options" id="analysisOptions">
+                    <label class="analysis-option selected" onclick="selectOption(this)">
+                        <input type="radio" name="atype" value="multi" checked>
+                        <div class="option-text">
+                            <strong>Multi-class Classification</strong>
+                            <span>Identify all land-use types in the image (Urban, Farmland, Forest, Water, Barren)</span>
+                        </div>
+                    </label>
+                    <label class="analysis-option" onclick="selectOption(this)">
+                        <input type="radio" name="atype" value="change">
+                        <div class="option-text">
+                            <strong>Change Detection vs Baseline</strong>
+                            <span>Compare your image against a pre-analyzed baseline period to detect changes</span>
+                        </div>
+                    </label>
+                    <label class="analysis-option" onclick="selectOption(this)">
+                        <input type="radio" name="atype" value="xai">
+                        <div class="option-text">
+                            <strong>Classification + XAI Heatmap</strong>
+                            <span>Full classification with explainability attention map overlay</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="btn-row" style="margin-top:16px">
+                    <button class="btn-secondary" onclick="resetAll()">Reset</button>
+                    <button class="btn-primary" id="analyzeBtn" onclick="runAnalysis()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Analyze &amp; Compare
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results (hidden until analysis runs) -->
+            <div class="card hidden" id="cardResults">
+                <div class="card-title">Analysis Results</div>
+                <div class="result-card-inner">
+                    <div>
+                        <div class="result-section-title">Detected Land-Use Classes</div>
+                        <div class="result-tag-row" id="resultTags"></div>
+                    </div>
+                    <div>
+                        <div class="result-section-title">Model Confidence</div>
+                        <div class="conf-bar-wrap">
+                            <div class="conf-label-row"><span>Overall confidence</span><span id="resultConf">—</span></div>
+                            <div class="conf-track"><div class="conf-fill" id="resultConfFill" style="width:0%"></div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="result-section-title">Area Statistics</div>
+                        <div id="resultStats"></div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn-primary" onclick="showToast('Report exported successfully.')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Export Results
+                        </button>
+                        <button class="btn-secondary" onclick="window.location.href='reporting.html'">Generate Report</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Right Panel ── -->
+        <div class="right-panel">
+
+            <!-- Recent uploads -->
+            <div class="card">
+                <div class="card-title">Recent Uploads</div>
+                <div id="recentList">
+                    <div class="recent-item">
+                        <div class="recent-thumb"><canvas id="rt1"></canvas></div>
+                        <div class="recent-info">
+                            <div class="recent-name">crop_field_494_6.jpg</div>
+                            <div class="recent-meta">1.2 MB · South Africa · 2 days ago</div>
+                        </div>
+                        <span class="recent-badge" style="background:var(--primary-light);color:var(--primary)">Classified</span>
+                    </div>
+                    <div class="recent-item">
+                        <div class="recent-thumb"><canvas id="rt2"></canvas></div>
+                        <div class="recent-info">
+                            <div class="recent-name">airport_terminal_422.jpg</div>
+                            <div class="recent-meta">2.8 MB · China · 4 days ago</div>
+                        </div>
+                        <span class="recent-badge" style="background:var(--primary-light);color:var(--primary)">Classified</span>
+                    </div>
+                    <div class="recent-item">
+                        <div class="recent-thumb"><canvas id="rt3"></canvas></div>
+                        <div class="recent-info">
+                            <div class="recent-name">residential_zone_JHB.tif</div>
+                            <div class="recent-meta">4.1 MB · South Africa · 1 week ago</div>
+                        </div>
+                        <span class="recent-badge" style="background:#fffbeb;color:#f59e0b">Pending</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="card">
+                <div class="card-title">Upload Tips</div>
+                <div class="tip-item"><div class="tip-dot"></div><p><strong>GeoTIFF preferred.</strong> Georeferenced images allow the system to auto-detect the region and apply the correct dataset (fMoW or MLRSNet).</p></div>
+                <div class="tip-item"><div class="tip-dot"></div><p><strong>Resolution matters.</strong> For best results, use imagery at 10m resolution or finer. The model was trained on 0.3–2m aerial data.</p></div>
+                <div class="tip-item"><div class="tip-dot"></div><p><strong>Comparing periods.</strong> Upload an image of a previously analyzed region to automatically trigger change detection.</p></div>
+                <div class="tip-item"><div class="tip-dot"></div><p><strong>Batch upload.</strong> Select multiple files at once to queue several regions for sequential analysis.</p></div>
+            </div>
+
+            <!-- Supported formats -->
+            <div class="card">
+                <div class="card-title">Supported Formats</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:7px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-muted)">GeoTIFF (.tif)</span><span style="font-weight:600;color:var(--primary)">Recommended</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:7px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-muted)">JPEG (.jpg)</span><span style="font-weight:600">Supported</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:7px 0;border-bottom:1px solid var(--border-color)"><span style="color:var(--text-muted)">PNG (.png)</span><span style="font-weight:600">Supported</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:7px 0"><span style="color:var(--text-muted)">Max file size</span><span style="font-weight:600">50 MB</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing overlay -->
+<div class="processing-overlay" id="procOverlay">
+    <div class="processing-box">
+        <div class="proc-spinner"></div>
+        <div class="proc-title">Running AI Analysis</div>
+        <div class="proc-step" id="procStep">Initializing model...</div>
+        <div class="proc-bar-track"><div class="proc-bar-fill" id="procBar" style="width:0%"></div></div>
+    </div>
+</div>
+
+<div class="toast" id="toast">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    <span id="toastMsg">Done</span>
+</div>
+
+<script>
+    let uploadedFiles = [];
+    let currentStep = 1;
+
+    const sampleResults = {
+        tags: [
+            { label: 'Urban', color: '#ef4444' },
+            { label: 'Farmland', color: '#f59e0b' },
+            { label: 'Vegetation', color: '#10b981' },
+        ],
+        conf: '91.2%', confVal: 91.2,
+        stats: [
+            { label: 'Total Area', val: '847 km²' },
+            { label: 'Analyzed Pixels', val: '32.4M' },
+            { label: 'Primary Class', val: 'Urban (42%)' },
+            { label: 'AI Model', val: 'Inception V3 + Attention' },
+        ]
+    };
+
+    function setStep(n) {
+        currentStep = n;
+        [1, 2, 3].forEach(i => {
+            const step = document.getElementById('step' + i);
+            const sn = document.getElementById('sn' + i);
+            step.classList.remove('active', 'done');
+            if (i < n) { step.classList.add('done'); sn.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`; }
+            else if (i === n) { step.classList.add('active'); sn.textContent = i; }
+            else { sn.textContent = i; }
+        });
+        [1, 2].forEach(i => {
+            const c = document.getElementById('sc' + i);
+            c.classList.toggle('done', i < n);
+        });
+
+        // Enable/disable cards
+        if (n >= 2) {
+            document.getElementById('cardLocation').style.opacity = '1';
+            document.getElementById('cardLocation').style.pointerEvents = '';
+        }
+        if (n >= 3) {
+            document.getElementById('cardAnalysis').style.opacity = '1';
+            document.getElementById('cardAnalysis').style.pointerEvents = '';
+        }
+    }
+
+    function handleFiles(files) {
+        Array.from(files).forEach(file => {
+            if (uploadedFiles.find(f => f.name === file.name)) return;
+            uploadedFiles.push(file);
+            addFileItem(file);
+        });
+        if (uploadedFiles.length > 0) setStep(2);
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        document.getElementById('uploadZone').classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    }
+
+    function addFileItem(file) {
+        const list = document.getElementById('fileList');
+        const size = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+        const id = 'fi_' + Date.now() + Math.random().toString(36).slice(2);
+        const div = document.createElement('div');
+        div.className = 'file-item';
+        div.id = id;
+        div.innerHTML = `
+            <div class="file-thumb"><canvas id="c${id}"></canvas></div>
+            <div class="file-info">
+                <div class="file-name">${file.name}</div>
+                <div class="file-meta">${size} · ${file.type || 'image/tiff'}</div>
+                <div class="upload-progress"><div class="upload-progress-fill" id="p${id}" style="width:0%"></div></div>
+            </div>
+            <span class="file-status processing" id="s${id}">Uploading...</span>
+            <button class="file-remove" onclick="removeFile('${id}','${file.name}')">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        `;
+        list.appendChild(div);
+
+        // Draw thumbnail
+        setTimeout(() => drawThumb('c' + id, Math.floor(Math.random() * 4)), 10);
+
+        // Simulate upload progress
+        let prog = 0;
+        const bar = document.getElementById('p' + id);
+        const status = document.getElementById('s' + id);
+        const iv = setInterval(() => {
+            prog += 8 + Math.random() * 15;
+            if (prog >= 100) {
+                prog = 100;
+                clearInterval(iv);
+                bar.style.width = '100%';
+                status.textContent = 'Ready';
+                status.className = 'file-status ready';
+            } else {
+                bar.style.width = prog + '%';
+            }
+        }, 120);
+    }
+
+    function removeFile(id, name) {
+        uploadedFiles = uploadedFiles.filter(f => f.name !== name);
+        const el = document.getElementById(id);
+        if (el) el.remove();
+        if (uploadedFiles.length === 0) setStep(1);
+    }
+
+    function selectOption(label) {
+        document.querySelectorAll('.analysis-option').forEach(o => o.classList.remove('selected'));
+        label.classList.add('selected');
+    }
+
+    function runAnalysis() {
+        if (uploadedFiles.length === 0) { showToast('Please upload at least one image first.'); return; }
+        setStep(3);
+        const overlay = document.getElementById('procOverlay');
+        overlay.classList.add('visible');
+
+        const steps = [
+            [10, 'Loading image data...'],
+            [25, 'Preprocessing & normalizing pixels...'],
+            [45, 'Running CNN feature extraction...'],
+            [65, 'Applying attention mechanism...'],
+            [80, 'Running multi-label classification...'],
+            [92, 'Generating explainability map...'],
+            [100, 'Finalizing results...'],
+        ];
+        let idx = 0;
+        const bar = document.getElementById('procBar');
+        const stepEl = document.getElementById('procStep');
+
+        const iv = setInterval(() => {
+            if (idx >= steps.length) {
+                clearInterval(iv);
+                setTimeout(() => {
+                    overlay.classList.remove('visible');
+                    showResults();
+                }, 400);
+                return;
+            }
+            const [pct, msg] = steps[idx++];
+            bar.style.width = pct + '%';
+            stepEl.textContent = msg;
+        }, 480);
+    }
+
+    function showResults() {
+        const card = document.getElementById('cardResults');
+        card.classList.remove('hidden');
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        document.getElementById('resultTags').innerHTML = sampleResults.tags.map(t => `
+            <span class="result-tag" style="color:${t.color};border-color:${t.color};background:${t.color}18">${t.label}</span>
+        `).join('');
+
+        document.getElementById('resultConf').textContent = sampleResults.conf;
+        setTimeout(() => {
+            document.getElementById('resultConfFill').style.width = sampleResults.confVal + '%';
+        }, 80);
+
+        document.getElementById('resultStats').innerHTML = sampleResults.stats.map(s => `
+            <div class="result-stat-row"><span>${s.label}</span><span>${s.val}</span></div>
+        `).join('');
+
+        // Mark file as done
+        document.querySelectorAll('.file-status.ready').forEach(el => {
+            el.textContent = 'Analyzed'; el.className = 'file-status done';
+        });
+
+        showToast('Analysis complete — results ready below.');
+    }
+
+    function resetAll() {
+        uploadedFiles = [];
+        document.getElementById('fileList').innerHTML = '';
+        document.getElementById('cardResults').classList.add('hidden');
+        document.getElementById('cardLocation').style.opacity = '0.55';
+        document.getElementById('cardLocation').style.pointerEvents = 'none';
+        document.getElementById('cardAnalysis').style.opacity = '0.55';
+        document.getElementById('cardAnalysis').style.pointerEvents = 'none';
+        setStep(1);
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // Canvas thumbnail drawing
+    const colors = [
+        ['#ef4444','#f59e0b','#10b981','#3b82f6','#9ca3af'],
+        ['#10b981','#3b82f6','#f59e0b','#ef4444','#9ca3af'],
+        ['#ef4444','#8b5cf6','#f59e0b','#10b981','#3b82f6'],
+        ['#3b82f6','#ef4444','#10b981','#9ca3af','#f59e0b'],
+    ];
+
+    function drawThumb(canvasId, palette) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        canvas.width = 40; canvas.height = 40;
+        const ctx = canvas.getContext('2d');
+        const cols = colors[palette % colors.length];
+        const seed = palette * 137 + canvasId.length;
+        const rng = n => ((Math.sin(n * seed) * 43758.5453) % 1 + 1) % 1;
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, 40, 40);
+        for (let i = 0; i < 30; i++) {
+            const x = rng(i * 3) * 40, y = rng(i * 7) * 40, s = 4 + rng(i * 11) * 14;
+            ctx.globalAlpha = 0.4 + rng(i * 5) * 0.45;
+            ctx.fillStyle = cols[Math.floor(rng(i * 17) * cols.length)];
+            ctx.fillRect(x, y, s, s * (0.5 + rng(i) * 0.8));
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // Init recent thumbnails
+    window.addEventListener('load', () => {
+        ['rt1','rt2','rt3'].forEach((id, i) => {
+            const c = document.getElementById(id);
+            if (c) { c.width = 46; c.height = 46; drawThumb(id, i); }
+        });
+    });
+</script>
+</body>
