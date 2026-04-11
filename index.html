@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TerraSustain Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <header class="top-nav">
+        <div class="logo-area">
+            <h1>TerraSustain Monitor</h1>
+            <p>Land Use Intelligence Platform</p>
+        </div>
+        <nav class="nav-links">
+            <a href="#" class="active">Dashboard</a>
+            <a href="#">Interactive Analysis</a>
+            <a href="#">Change Detection</a>
+            <a href="#">Reporting</a>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <h3>Analysis Controls</h3>
+            <div class="control-group">
+                <label>Location Selection</label>
+                <select id="region-select">
+                    <option value="zaf">Johannesburg, South Africa</option>
+                    <option value="chn">Beijing, China</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Analysis Type</label>
+                <select>
+                    <option>Multi-class Classification</option>
+                </select>
+            </div>
+            <button id="run-analysis-btn" class="primary-btn">Run Analysis</button>
+        </aside>
+
+        <main class="content-area">
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <h4>Total Urban Area</h4>
+                    <h2 id="urban-metric">-- km²</h2>
+                </div>
+                <div class="metric-card">
+                    <h4>Identified Vegetation Degradation</h4>
+                    <h2 id="veg-metric">-- hectares</h2>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div class="map-header">
+                    <h3>Global Monitoring Regions</h3>
+                </div>
+                <div id="satellite-map-view" class="map-placeholder">
+                    <p>Satellite Map Visualization Area</p>
+                    <p class="subtext">Awaiting data injection...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
