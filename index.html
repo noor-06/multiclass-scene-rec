@@ -30,9 +30,10 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-dark);
+            min-height: 100vh;
         }
 
-        /* Header Styling */
+        /* Header Styling with Sticky Nav */
         .top-nav {
             display: flex;
             justify-content: space-between;
@@ -40,9 +41,12 @@
             background: var(--card-bg);
             padding: 12px 30px;
             border-bottom: 1px solid var(--border-color);
+            
+            /* Sticky Navigation */
             position: sticky;
             top: 0;
             z-index: 1000;
+            flex-shrink: 0;
         }
 
         .logo-area {
@@ -158,7 +162,7 @@
             border-radius: 12px;
             border: 1px solid var(--border-color);
             padding: 20px;
-            min-width: 0; 
+            min-width: 0; /* Fixes CSS Grid Canvas Blowout */
             display: flex;
             flex-direction: column;
         }
@@ -180,8 +184,9 @@
             font-weight: 500;
         }
 
+        /* Globe Canvas Container */
         .globe-placeholder {
-            height: 500px; /* Made slightly taller to fit the legends */
+            height: 500px; 
             background: #0B1120;
             border-radius: 8px;
             position: relative;
@@ -268,7 +273,7 @@
                 <p>Land Use Intelligence Platform</p>
             </div>
         </div>
-       <nav class="nav-links">
+        <nav class="nav-links">
             <a href="index.html" class="active">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 Dashboard
@@ -305,8 +310,8 @@
                     <h4>Total Urban Area</h4>
                     <div class="trend-icon red"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div>
                 </div>
-                <h2>2,847 km²</h2>
-                <p class="trend-data red">+12.4% <span class="muted">Compared to 2020</span></p>
+                <h2 id="val-urban">2,847 km²</h2>
+                <p class="trend-data red" id="trend-urban">+12.4% <span class="muted">in South Africa</span></p>
             </div>
             
             <div class="metric-card">
@@ -314,8 +319,8 @@
                     <h4>Identified Vegetation Degradation</h4>
                     <div class="trend-icon red"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div>
                 </div>
-                <h2>1,523 hectares</h2>
-                <p class="trend-data red">+8.2% <span class="muted">Monitoring 45 regions</span></p>
+                <h2 id="val-veg">1,523 hectares</h2>
+                <p class="trend-data red" id="trend-veg">+8.2% <span class="muted">in South Africa</span></p>
             </div>
 
             <div class="metric-card">
@@ -323,8 +328,8 @@
                     <h4>Net Change in Farmland Area</h4>
                     <div class="trend-icon green"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg></div>
                 </div>
-                <h2>-342 km²</h2>
-                <p class="trend-data green">-5.1% <span class="muted">Since last quarter</span></p>
+                <h2 id="val-farm">-342 km²</h2>
+                <p class="trend-data green" id="trend-farm">-5.1% <span class="muted">in South Africa</span></p>
             </div>
         </div>
 
@@ -403,18 +408,26 @@
             const container = document.getElementById('globeViz');
             const wrapper = document.getElementById('globe-container');
             
-            // Your research project coordinates
+            // Define the regions and their associated live metrics
             const analysisRegions = [
-                { lat: -28.4793, lng: 24.6727, label: 'South Africa', color: '#ef4444' }, // Red (High Activity)
-                { lat: 35.8617, lng: 104.1954, label: 'China', color: '#10b981' }, // Green (Low Activity)
-                { lat: -33.9249, lng: 18.4241, label: 'Cape Town', color: '#eab308' } // Yellow (Medium)
+                { 
+                    lat: -28.4793, lng: 24.6727, label: 'South Africa', color: '#ef4444',
+                    metrics: { urban: '2,847 km²', utrend: '+12.4%', veg: '1,523 hectares', vtrend: '+8.2%', farm: '-342 km²', ftrend: '-5.1%' }
+                },
+                { 
+                    lat: 35.8617, lng: 104.1954, label: 'China', color: '#10b981',
+                    metrics: { urban: '14,210 km²', utrend: '+18.7%', veg: '4,120 hectares', vtrend: '+14.3%', farm: '-1,890 km²', ftrend: '-11.2%' }
+                },
+                { 
+                    lat: -33.9249, lng: 18.4241, label: 'Cape Town', color: '#eab308',
+                    metrics: { urban: '840 km²', utrend: '+9.1%', veg: '320 hectares', vtrend: '+4.5%', farm: '-45 km²', ftrend: '-1.2%' }
+                }
             ];
 
             try {
                 // Initialize the Globe
                 const world = Globe()
                     (container)
-                    // Added Realistic Satellite Imagery and Starry Background
                     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
                     .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
                     .width(wrapper.clientWidth)
@@ -426,9 +439,28 @@
                     .labelSize(1.5)
                     .labelDotRadius(1)
                     .labelColor(d => d.color)
-                    .labelResolution(2);
+                    .labelResolution(2)
+                    // Click Event Listener for Dynamic Updates
+                    .onLabelClick(d => {
+                        // Update the DOM elements with the new region's data
+                        document.getElementById('val-urban').innerText = d.metrics.urban;
+                        document.getElementById('trend-urban').innerHTML = `${d.metrics.utrend} <span class="muted">in ${d.label}</span>`;
+                        
+                        document.getElementById('val-veg').innerText = d.metrics.veg;
+                        document.getElementById('trend-veg').innerHTML = `${d.metrics.vtrend} <span class="muted">in ${d.label}</span>`;
+                        
+                        document.getElementById('val-farm').innerText = d.metrics.farm;
+                        document.getElementById('trend-farm').innerHTML = `${d.metrics.ftrend} <span class="muted">in ${d.label}</span>`;
 
-                // Add the green atmosphere glow
+                        // Smoothly fly the camera to the clicked region
+                        world.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.2 }, 1200);
+                        
+                        // Briefly pause auto-rotation so the user can look at the region
+                        world.controls().autoRotate = false;
+                        setTimeout(() => { world.controls().autoRotate = true; }, 5000);
+                    });
+
+                // Atmosphere
                 world.atmosphereColor('#10b981');
                 world.atmosphereAltitude(0.15);
 
