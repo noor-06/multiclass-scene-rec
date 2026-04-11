@@ -176,6 +176,7 @@
             background: #0B1120;
             border-radius: 8px;
             position: relative;
+            overflow: hidden;
         }
 
         .globe-controls {
@@ -209,6 +210,10 @@
         .activity-details .time { color: #9ca3af; margin-top: 2px; font-size: 0.75rem;}
 
     </style>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/globe.gl"></script>
+    
 </head>
 <body>
 
@@ -338,6 +343,39 @@
         </div>
 
     </main>
+<script>
+        $(document).ready(function() {
+            const container = document.querySelector('.globe-placeholder');
+            container.innerHTML = ''; // Clears the placeholder text
+            
+            // Coordinates for the project datasets
+            const analysisRegions = [
+                { lat: -28.4793, lng: 24.6727, label: 'South Africa (fMoW)', color: '#10b981' },
+                { lat: 35.8617, lng: 104.1954, label: 'China (MLRSNet)', color: '#ef4444' }
+            ];
+
+            // Initialize the 3D Globe
+            const world = Globe()
+                (container)
+                .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+                .backgroundColor('#0B1120')
+                .width(container.clientWidth)
+                .height(400)
+                .labelsData(analysisRegions)
+                .labelLat(d => d.lat)
+                .labelLng(d => d.lng)
+                .labelText(d => d.label)
+                .labelSize(1.5)
+                .labelDotRadius(0.8)
+                .labelColor(d => d.color)
+                .labelResolution(2);
+
+            // Set up gentle auto-rotation and initial camera position
+            world.controls().autoRotate = true;
+            world.controls().autoRotateSpeed = 0.8;
+            world.pointOfView({ lat: 10, lng: 60, altitude: 2.2 });
+        });
+    </script>
 
 </body>
 </html>
