@@ -10,59 +10,100 @@
 <body>
     <header class="top-nav">
         <div class="logo-area">
-            <h1>TerraSustain Monitor</h1>
-            <p>Land Use Intelligence Platform</p>
+            <div class="logo-icon"></div>
+            <div>
+                <h1>TerraSustain Monitor</h1>
+                <p>Land Use Intelligence Platform</p>
+            </div>
         </div>
         <nav class="nav-links">
-            <a href="#" class="active">Dashboard</a>
+            <a href="#" class="active"><span class="icon">📊</span> Dashboard</a>
             <a href="#">Interactive Analysis</a>
             <a href="#">Change Detection</a>
             <a href="#">Reporting</a>
+            <a href="#">User Analysis</a>
         </nav>
     </header>
 
-    <div class="main-container">
-        <aside class="sidebar">
-            <h3>Analysis Controls</h3>
-            <div class="control-group">
-                <label>Location Selection</label>
-                <select id="region-select">
-                    <option value="zaf">Johannesburg, South Africa</option>
-                    <option value="chn">Beijing, China</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Analysis Type</label>
-                <select>
-                    <option>Multi-class Classification</option>
-                </select>
-            </div>
-            <button id="run-analysis-btn" class="primary-btn">Run Analysis</button>
-        </aside>
+    <main class="dashboard-container">
+        <div class="search-bar">
+            <input type="text" placeholder="🔍 Search regions, analyses, or reports...">
+        </div>
 
-        <main class="content-area">
-            <div class="metrics-row">
-                <div class="metric-card">
+        <div class="metrics-row">
+            <div class="metric-card">
+                <div class="card-header">
                     <h4>Total Urban Area</h4>
-                    <h2 id="urban-metric">-- km²</h2>
+                    <span class="trend-icon red">↗</span>
                 </div>
-                <div class="metric-card">
+                <h2>2,847 km²</h2>
+                <p class="trend-text red">+12.4% <span class="muted">Compared to 2020</span></p>
+            </div>
+            
+            <div class="metric-card">
+                <div class="card-header">
                     <h4>Identified Vegetation Degradation</h4>
-                    <h2 id="veg-metric">-- hectares</h2>
+                    <span class="trend-icon red">↗</span>
+                </div>
+                <h2>1,523 hectares</h2>
+                <p class="trend-text red">+8.2% <span class="muted">Monitoring 45 regions</span></p>
+            </div>
+
+            <div class="metric-card">
+                <div class="card-header">
+                    <h4>Net Change in Farmland Area</h4>
+                    <span class="trend-icon green">↘</span>
+                </div>
+                <h2>-342 km²</h2>
+                <p class="trend-text green">-5.1% <span class="muted">Since last quarter</span></p>
+            </div>
+        </div>
+
+        <div class="bottom-row">
+            <div class="globe-section">
+                <div class="section-header">
+                    <h3>Global Monitoring Regions</h3>
+                    <button class="pill-btn">All Regions</button>
+                </div>
+                <div class="globe-placeholder">
+                    <div class="globe-overlay">
+                        <p>3D Globe Container</p>
+                        <p class="subtext">(Awaiting Globe.gl integration)</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="map-container">
-                <div class="map-header">
-                    <h3>Global Monitoring Regions</h3>
-                </div>
-                <div id="satellite-map-view" class="map-placeholder">
-                    <p>Satellite Map Visualization Area</p>
-                    <p class="subtext">Awaiting data injection...</p>
+            <div class="activity-section">
+                <h3>Recent Activity</h3>
+                <div class="activity-list">
+                    <div class="activity-item">
+                        <div class="activity-icon green">📍</div>
+                        <div class="activity-details">
+                            <p class="activity-title">Urban expansion detected</p>
+                            <p class="activity-loc">Johannesburg, South Africa</p>
+                            <p class="activity-time">2 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon green">📅</div>
+                        <div class="activity-details">
+                            <p class="activity-title">Vegetation analysis completed</p>
+                            <p class="activity-loc">Cape Town, South Africa</p>
+                            <p class="activity-time">5 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-icon green">📍</div>
+                        <div class="activity-details">
+                            <p class="activity-title">New farmland classification</p>
+                            <p class="activity-loc">Beijing, China</p>
+                            <p class="activity-time">1 day ago</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <script src="app.js"></script>
 </body>
