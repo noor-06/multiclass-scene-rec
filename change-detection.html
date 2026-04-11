@@ -1,0 +1,594 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Change Detection - TerraSustain Monitor</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-light: #ecfdf5;
+            --primary-dark: #059669;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --red: #ef4444;
+            --red-bg: #fef2f2;
+            --yellow: #f59e0b;
+            --blue: #3b82f6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+
+        body { background: var(--bg-color); color: var(--text-dark); min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* Header */
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); padding: 12px 30px;
+            border-bottom: 1px solid var(--border-color); z-index: 1000; flex-shrink: 0;
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-text h1 { font-size: 1.1rem; color: #0f172a; font-weight: 600; }
+        .logo-text p { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 6px; text-decoration: none;
+            color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+            padding: 8px 12px; border-radius: 6px; transition: all 0.2s;
+        }
+        .nav-links a.active { color: var(--primary); background: var(--primary-light); }
+        .nav-links svg { width: 16px; height: 16px; }
+
+        /* Page body */
+        .page-body { flex: 1; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+
+        /* Top control bar */
+        .control-bar {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 16px 20px;
+            display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+        }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+        .form-control {
+            padding: 9px 12px; border: 1px solid var(--border-color);
+            border-radius: 8px; font-size: 0.85rem; color: var(--text-dark);
+            outline: none; background: var(--bg-color); transition: border 0.2s; min-width: 180px;
+        }
+        .form-control:focus { border-color: var(--primary); }
+        select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+        .run-btn {
+            padding: 10px 20px; background: var(--primary); color: white;
+            border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s; white-space: nowrap;
+        }
+        .run-btn:hover { background: var(--primary-dark); }
+        .run-btn svg { width: 16px; height: 16px; }
+        .control-bar .spacer { flex: 1; }
+
+        /* Split map area */
+        .split-view {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+            border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color);
+            height: 420px; position: relative;
+        }
+
+        .map-pane { position: relative; overflow: hidden; }
+        .map-pane:first-child { border-right: 2px solid white; }
+
+        .map-canvas { display: block; width: 100%; height: 100%; }
+
+        .pane-label {
+            position: absolute; top: 14px; left: 14px;
+            background: rgba(15,23,42,0.85); color: white;
+            padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+            backdrop-filter: blur(4px);
+        }
+        .pane-label.date-b { background: rgba(16,185,129,0.85); }
+
+        /* Divider line */
+        .divider-handle {
+            position: absolute; left: 50%; top: 0; bottom: 0;
+            width: 4px; background: white; transform: translateX(-50%);
+            z-index: 5; display: flex; align-items: center; justify-content: center;
+        }
+        .divider-circle {
+            width: 30px; height: 30px; background: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); color: var(--text-muted); font-size: 0.75rem; font-weight: 700;
+        }
+
+        /* Loading overlay */
+        .map-loading {
+            position: absolute; inset: 0; background: rgba(26,31,46,0.8);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .map-loading.visible { opacity: 1; pointer-events: all; }
+        .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(16,185,129,0.3); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+        .loading-text { color: white; font-size: 0.85rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Results row */
+        .results-row {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
+            opacity: 0; transform: translateY(12px);
+            transition: all 0.5s ease; pointer-events: none;
+        }
+        .results-row.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+
+        .result-card {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 18px 20px;
+        }
+        .result-card-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+        }
+        .result-card-header h3 { font-size: 0.95rem; font-weight: 600; }
+        .export-btn {
+            background: var(--primary-light); color: var(--primary); border: none;
+            padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s;
+        }
+        .export-btn:hover { background: var(--primary); color: white; }
+        .export-btn svg { width: 13px; height: 13px; }
+
+        /* Transition table */
+        .transition-table { width: 100%; border-collapse: collapse; }
+        .transition-table th { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-align: left; padding: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .transition-table th:last-child { text-align: right; }
+        .transition-table td { padding: 8px 0; font-size: 0.83rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .transition-table tr:last-child td { border-bottom: none; }
+
+        .transition-arrow { display: flex; align-items: center; gap: 5px; }
+        .trans-from, .trans-to { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .arrow-icon { color: var(--text-muted); font-size: 0.8rem; }
+        .hectares { text-align: right; font-weight: 600; }
+
+        .change-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+        /* Bar chart */
+        .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+        .bar-row { display: flex; align-items: center; gap: 10px; }
+        .bar-label { font-size: 0.8rem; width: 70px; color: var(--text-dark); flex-shrink: 0; }
+        .bar-track { flex: 1; height: 20px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 4px; transition: width 1.2s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; }
+        .bar-fill span { font-size: 0.72rem; font-weight: 600; color: white; }
+
+        /* Summary metrics */
+        .summary-metrics { display: flex; flex-direction: column; gap: 12px; }
+        .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-color); border-radius: 8px; }
+        .metric-row-label { font-size: 0.82rem; color: var(--text-muted); }
+        .metric-row-value { font-size: 0.95rem; font-weight: 700; }
+        .metric-row-value.green { color: var(--primary); }
+        .metric-row-value.red { color: var(--red); }
+        .metric-row-value.yellow { color: var(--yellow); }
+
+        /* Placeholder */
+        .placeholder-card {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 40px; text-align: center;
+            color: var(--text-muted);
+        }
+        .placeholder-card svg { width: 48px; height: 48px; opacity: 0.25; margin-bottom: 14px; }
+        .placeholder-card p { font-size: 0.88rem; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<header class="top-nav">
+    <div class="logo-area">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="8" fill="#0EA5E9"/>
+            <path d="M12 10V26M18 10V26M24 10V26" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M9 14C11.5 12 14.5 16 18 14C21.5 12 24.5 16 27 14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="logo-text">
+            <h1>TerraSustain Monitor</h1>
+            <p>Land Use Intelligence Platform</p>
+        </div>
+    </div>
+    <nav class="nav-links">
+        <a href="index.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Dashboard
+        </a>
+        <a href="interactive-analysis.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+            Interactive Analysis
+        </a>
+        <a href="change-detection.html" class="active">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+            Change Detection
+        </a>
+        <a href="reporting.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Reporting
+        </a>
+        <a href="user-analysis.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            User Analysis
+        </a>
+    </nav>
+</header>
+
+<div class="page-body">
+
+    <!-- Control Bar -->
+    <div class="control-bar">
+        <div class="control-group">
+            <label>Start Date (Date A)</label>
+            <input type="date" class="form-control" value="2020-01-01" id="dateA">
+        </div>
+        <div class="control-group">
+            <label>End Date (Date B)</label>
+            <input type="date" class="form-control" value="2024-11-20" id="dateB">
+        </div>
+        <div class="control-group">
+            <label>Region</label>
+            <select class="form-control" id="regionSelect">
+                <option value="johannesburg">Johannesburg, South Africa</option>
+                <option value="capetown">Cape Town, South Africa</option>
+                <option value="beijing">Beijing, China</option>
+                <option value="shanghai">Shanghai, China</option>
+            </select>
+        </div>
+        <div class="spacer"></div>
+        <button class="run-btn" onclick="runComparison()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+            Run Comparison
+        </button>
+    </div>
+
+    <!-- Split Map View -->
+    <div class="split-view" id="splitView">
+        <div class="map-pane" id="paneA">
+            <canvas id="canvasA" class="map-canvas"></canvas>
+            <div class="pane-label" id="labelA">Date A: 01/01/2020</div>
+        </div>
+        <div class="map-pane" id="paneB">
+            <canvas id="canvasB" class="map-canvas"></canvas>
+            <div class="pane-label date-b" id="labelB">Date B: 11/20/2024</div>
+        </div>
+        <div class="divider-handle">
+            <div class="divider-circle">↔</div>
+        </div>
+        <div class="map-loading" id="mapLoading">
+            <div class="loading-spinner"></div>
+            <p class="loading-text" id="mapLoadingText">Comparing temporal images...</p>
+        </div>
+    </div>
+
+    <!-- Results (hidden until comparison runs) -->
+    <div id="placeholderSection">
+        <div class="placeholder-card">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+            <p>Select a region and two dates, then click <strong>Run Comparison</strong> to detect land-use changes between periods.</p>
+        </div>
+    </div>
+
+    <div class="results-row" id="resultsRow">
+        <!-- Transitions card -->
+        <div class="result-card">
+            <div class="result-card-header">
+                <h3>Land Use Transitions</h3>
+            </div>
+            <table class="transition-table">
+                <thead>
+                    <tr>
+                        <th>Transition</th>
+                        <th style="text-align:right">Change</th>
+                    </tr>
+                </thead>
+                <tbody id="transitionBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Bar chart card -->
+        <div class="result-card">
+            <div class="result-card-header">
+                <h3>Change Magnitude</h3>
+            </div>
+            <div class="bar-chart" id="barChart"></div>
+        </div>
+
+        <!-- Summary metrics card -->
+        <div class="result-card">
+            <div class="result-card-header">
+                <h3>Summary Metrics</h3>
+                <button class="export-btn" onclick="exportReport()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export Report
+                </button>
+            </div>
+            <div class="summary-metrics" id="summaryMetrics"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const regionChangeData = {
+        johannesburg: {
+            transitions: [
+                { from: 'Forest', fromColor: '#10b981', to: 'Urban', toColor: '#ef4444', hectares: 50 },
+                { from: 'Farmland', fromColor: '#f59e0b', to: 'Urban', toColor: '#ef4444', hectares: 35 },
+                { from: 'Water', fromColor: '#3b82f6', to: 'Barren', toColor: '#9ca3af', hectares: 12 },
+                { from: 'Forest', fromColor: '#10b981', to: 'Farmland', toColor: '#f59e0b', hectares: 20 },
+            ],
+            bars: [
+                { label: 'Urban', value: 55, color: '#ef4444' },
+                { label: 'Urban', value: 35, color: '#ef4444' },
+                { label: 'Barren', value: 12, color: '#9ca3af' },
+                { label: 'Farmland', value: 20, color: '#f59e0b' },
+            ],
+            barLabels: ['Forest→Urban', 'Farm→Urban', 'Water→Barren', 'Forest→Farm'],
+            summary: {
+                netUrbanGrowth: { val: '+125 km²', cls: 'red' },
+                netVegetationLoss: { val: '-78 km²', cls: 'red' },
+                overallChangeRate: { val: '12.4%', cls: 'yellow' },
+                periodYears: { val: '4 years', cls: '' },
+                analyzedArea: { val: '1,247 km²', cls: '' },
+            },
+            mapColorsA: ['#10b981','#f59e0b','#3b82f6','#ef4444','#9ca3af'],
+            mapColorsB: ['#ef4444','#ef4444','#f59e0b','#10b981','#9ca3af'],
+        },
+        capetown: {
+            transitions: [
+                { from: 'Vegetation', fromColor: '#10b981', to: 'Urban', toColor: '#ef4444', hectares: 38 },
+                { from: 'Water', fromColor: '#3b82f6', to: 'Urban', toColor: '#ef4444', hectares: 14 },
+                { from: 'Farmland', fromColor: '#f59e0b', to: 'Barren', toColor: '#9ca3af', hectares: 22 },
+                { from: 'Barren', fromColor: '#9ca3af', to: 'Farmland', toColor: '#f59e0b', hectares: 10 },
+            ],
+            bars: [
+                { label: 'Urban', value: 38, color: '#ef4444' },
+                { label: 'Urban', value: 14, color: '#ef4444' },
+                { label: 'Barren', value: 22, color: '#9ca3af' },
+                { label: 'Farmland', value: 10, color: '#f59e0b' },
+            ],
+            barLabels: ['Veg→Urban', 'Water→Urban', 'Farm→Barren', 'Barren→Farm'],
+            summary: {
+                netUrbanGrowth: { val: '+97 km²', cls: 'red' },
+                netVegetationLoss: { val: '-54 km²', cls: 'red' },
+                overallChangeRate: { val: '9.1%', cls: 'yellow' },
+                periodYears: { val: '4 years', cls: '' },
+                analyzedArea: { val: '2,461 km²', cls: '' },
+            },
+            mapColorsA: ['#10b981','#3b82f6','#f59e0b','#ef4444','#9ca3af'],
+            mapColorsB: ['#ef4444','#ef4444','#9ca3af','#f59e0b','#10b981'],
+        },
+        beijing: {
+            transitions: [
+                { from: 'Farmland', fromColor: '#f59e0b', to: 'Urban', toColor: '#ef4444', hectares: 95 },
+                { from: 'Forest', fromColor: '#10b981', to: 'Industrial', toColor: '#8b5cf6', hectares: 42 },
+                { from: 'Farmland', fromColor: '#f59e0b', to: 'Industrial', toColor: '#8b5cf6', hectares: 33 },
+                { from: 'Water', fromColor: '#3b82f6', to: 'Barren', toColor: '#9ca3af', hectares: 18 },
+            ],
+            bars: [
+                { label: 'Urban', value: 95, color: '#ef4444' },
+                { label: 'Industrial', value: 42, color: '#8b5cf6' },
+                { label: 'Industrial', value: 33, color: '#8b5cf6' },
+                { label: 'Barren', value: 18, color: '#9ca3af' },
+            ],
+            barLabels: ['Farm→Urban', 'Forest→Ind.', 'Farm→Ind.', 'Water→Barren'],
+            summary: {
+                netUrbanGrowth: { val: '+340 km²', cls: 'red' },
+                netVegetationLoss: { val: '-130 km²', cls: 'red' },
+                overallChangeRate: { val: '18.7%', cls: 'red' },
+                periodYears: { val: '4 years', cls: '' },
+                analyzedArea: { val: '16,411 km²', cls: '' },
+            },
+            mapColorsA: ['#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6'],
+            mapColorsB: ['#ef4444','#8b5cf6','#9ca3af','#ef4444','#10b981'],
+        },
+        shanghai: {
+            transitions: [
+                { from: 'Farmland', fromColor: '#f59e0b', to: 'Urban', toColor: '#ef4444', hectares: 110 },
+                { from: 'Water', fromColor: '#3b82f6', to: 'Urban', toColor: '#ef4444', hectares: 28 },
+                { from: 'Forest', fromColor: '#10b981', to: 'Urban', toColor: '#ef4444', hectares: 18 },
+                { from: 'Farmland', fromColor: '#f59e0b', to: 'Industrial', toColor: '#8b5cf6', hectares: 55 },
+            ],
+            bars: [
+                { label: 'Urban', value: 110, color: '#ef4444' },
+                { label: 'Urban', value: 28, color: '#ef4444' },
+                { label: 'Urban', value: 18, color: '#ef4444' },
+                { label: 'Industrial', value: 55, color: '#8b5cf6' },
+            ],
+            barLabels: ['Farm→Urban', 'Water→Urban', 'Forest→Urban', 'Farm→Ind.'],
+            summary: {
+                netUrbanGrowth: { val: '+415 km²', cls: 'red' },
+                netVegetationLoss: { val: '-88 km²', cls: 'red' },
+                overallChangeRate: { val: '21.3%', cls: 'red' },
+                periodYears: { val: '4 years', cls: '' },
+                analyzedArea: { val: '6,340 km²', cls: '' },
+            },
+            mapColorsA: ['#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6'],
+            mapColorsB: ['#ef4444','#ef4444','#8b5cf6','#ef4444','#9ca3af'],
+        }
+    };
+
+    let comparisonRun = false;
+
+    function initMaps() {
+        const paneA = document.getElementById('paneA');
+        const paneB = document.getElementById('paneB');
+        const cA = document.getElementById('canvasA');
+        const cB = document.getElementById('canvasB');
+        cA.width = paneA.offsetWidth; cA.height = paneA.offsetHeight;
+        cB.width = paneB.offsetWidth; cB.height = paneB.offsetHeight;
+        drawMap(cA, 'johannesburg', 'A');
+        drawMap(cB, 'johannesburg', 'B');
+    }
+
+    function drawMap(canvas, region, period) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        const data = regionChangeData[region];
+        const colors = period === 'A' ? data.mapColorsA : data.mapColorsB;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, w, h);
+
+        const seed = (region.length * 137) + (period === 'B' ? 500 : 0);
+        const rng = (n) => ((Math.sin(n * seed) * 43758.5453) % 1 + 1) % 1;
+
+        // Draw landscape patches
+        for (let i = 0; i < 200; i++) {
+            const x = rng(i * 3.1) * w;
+            const y = rng(i * 7.3) * h;
+            const s = 15 + rng(i * 11.7) * 100;
+            const col = colors[Math.floor(rng(i * 17) * colors.length)];
+            ctx.globalAlpha = 0.3 + rng(i * 5) * 0.4;
+            ctx.fillStyle = col;
+            if (rng(i * 2) > 0.5) {
+                ctx.fillRect(x, y, s, s * (0.4 + rng(i) * 0.8));
+            } else {
+                ctx.beginPath(); ctx.arc(x, y, s / 2, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+
+        // Road network
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1.2;
+        for (let i = 0; i < 10; i++) {
+            ctx.beginPath(); ctx.moveTo(rng(i * 5) * w, 0); ctx.lineTo(rng(i * 8) * w, h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, rng(i * 3) * h); ctx.lineTo(w, rng(i * 9) * h); ctx.stroke();
+        }
+
+        // Grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+        for (let y = 0; y < h; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+        // Period-specific tint
+        if (period === 'A') {
+            ctx.fillStyle = 'rgba(59,130,246,0.06)';
+            ctx.fillRect(0, 0, w, h);
+        } else {
+            ctx.fillStyle = 'rgba(239,68,68,0.06)';
+            ctx.fillRect(0, 0, w, h);
+        }
+    }
+
+    function runComparison() {
+        const region = document.getElementById('regionSelect').value;
+        const dateA = document.getElementById('dateA').value;
+        const dateB = document.getElementById('dateB').value;
+
+        const loading = document.getElementById('mapLoading');
+        const loadingText = document.getElementById('mapLoadingText');
+        loading.style.opacity = '1'; loading.style.pointerEvents = 'all';
+
+        const steps = [
+            'Loading historical imagery...',
+            'Aligning geographic coordinates...',
+            'Running classification on Date A...',
+            'Running classification on Date B...',
+            'Computing change matrix...',
+            'Generating comparison report...'
+        ];
+        let step = 0;
+        const interval = setInterval(() => {
+            if (step < steps.length) { loadingText.textContent = steps[step++]; }
+            else {
+                clearInterval(interval);
+                loading.style.opacity = '0'; loading.style.pointerEvents = 'none';
+
+                // Format labels
+                const fmtA = new Date(dateA).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                const fmtB = new Date(dateB).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                document.getElementById('labelA').textContent = `Date A: ${fmtA}`;
+                document.getElementById('labelB').textContent = `Date B: ${fmtB}`;
+
+                // Redraw maps for selected region
+                const cA = document.getElementById('canvasA');
+                const cB = document.getElementById('canvasB');
+                cA.width = document.getElementById('paneA').offsetWidth;
+                cA.height = document.getElementById('paneA').offsetHeight;
+                cB.width = document.getElementById('paneB').offsetWidth;
+                cB.height = document.getElementById('paneB').offsetHeight;
+                drawMap(cA, region, 'A');
+                drawMap(cB, region, 'B');
+
+                comparisonRun = true;
+                showResults(region);
+            }
+        }, 550);
+    }
+
+    function showResults(region) {
+        document.getElementById('placeholderSection').style.display = 'none';
+        const data = regionChangeData[region];
+        const resultsRow = document.getElementById('resultsRow');
+        resultsRow.classList.add('visible');
+
+        // Transitions table
+        const maxH = Math.max(...data.transitions.map(t => t.hectares));
+        document.getElementById('transitionBody').innerHTML = data.transitions.map(t => `
+            <tr>
+                <td>
+                    <div class="transition-arrow">
+                        <span class="trans-from" style="background:${t.fromColor}22;color:${t.fromColor}">${t.from}</span>
+                        <span class="arrow-icon">→</span>
+                        <span class="trans-to" style="background:${t.toColor}22;color:${t.toColor}">${t.to}</span>
+                    </div>
+                </td>
+                <td class="hectares">${t.hectares} ha <span class="change-dot" style="background:${t.toColor}"></span></td>
+            </tr>
+        `).join('');
+
+        // Bar chart
+        const maxVal = Math.max(...data.bars.map(b => b.value));
+        document.getElementById('barChart').innerHTML = data.bars.map((b, i) => `
+            <div class="bar-row">
+                <span class="bar-label" style="font-size:0.72rem;color:var(--text-muted)">${data.barLabels[i]}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:0%;background:${b.color}" data-w="${(b.value / maxVal * 100).toFixed(0)}">
+                        <span>${b.value} ha</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        setTimeout(() => {
+            document.querySelectorAll('.bar-fill').forEach(b => b.style.width = b.dataset.w + '%');
+        }, 50);
+
+        // Summary
+        const s = data.summary;
+        document.getElementById('summaryMetrics').innerHTML = `
+            <div class="metric-row">
+                <span class="metric-row-label">Net Urban Growth</span>
+                <span class="metric-row-value ${s.netUrbanGrowth.cls}">${s.netUrbanGrowth.val}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-row-label">Net Vegetation Loss</span>
+                <span class="metric-row-value ${s.netVegetationLoss.cls}">${s.netVegetationLoss.val}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-row-label">Overall Change Rate</span>
+                <span class="metric-row-value ${s.overallChangeRate.cls}">${s.overallChangeRate.val}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-row-label">Period Analyzed</span>
+                <span class="metric-row-value">${s.periodYears.val}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-row-label">Total Area</span>
+                <span class="metric-row-value">${s.analyzedArea.val}</span>
+            </div>
+        `;
+    }
+
+    function exportReport() {
+        alert('Report export initiated. In the full implementation, this generates a PDF with the change matrix and maps.');
+    }
+
+    window.addEventListener('load', initMaps);
+    window.addEventListener('resize', initMaps);
+</script>
+</body>
+</html>
