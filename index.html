@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TerraSustain Monitor</title>
+    
+    <script src="https://unpkg.com/globe.gl"></script>
+    
     <style>
         :root {
             --primary: #10b981;
@@ -152,6 +155,10 @@
             border-radius: 12px;
             border: 1px solid var(--border-color);
             padding: 20px;
+            /* THIS IS THE MAGIC FIX TO STOP THE GLOBE FROM BREAKING THE GRID */
+            min-width: 0; 
+            display: flex;
+            flex-direction: column;
         }
 
         .section-header {
@@ -177,20 +184,29 @@
             border-radius: 8px;
             position: relative;
             overflow: hidden;
+            width: 100%;
+            flex-grow: 1;
         }
 
         .globe-controls {
             position: absolute;
             bottom: 20px;
             right: 20px;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.95);
             padding: 12px;
             border-radius: 8px;
             font-size: 0.75rem;
             color: #333;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
+        .globe-controls p { margin: 4px 0; font-weight: 500;}
 
         /* Activity List */
+        .activity-list {
+            overflow-y: auto;
+        }
+        
         .activity-item {
             display: flex;
             gap: 12px;
@@ -210,10 +226,6 @@
         .activity-details .time { color: #9ca3af; margin-top: 2px; font-size: 0.75rem;}
 
     </style>
-
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://unpkg.com/globe.gl"></script>
-    
 </head>
 <body>
 
@@ -295,7 +307,10 @@
                     <h3>Global Monitoring Regions</h3>
                     <button class="pill-btn">All Regions</button>
                 </div>
-                <div class="globe-placeholder">
+                
+                <div class="globe-placeholder" id="globe-container">
+                    <div id="globeViz"></div>
+                    
                     <div class="globe-controls">
                         <p>👆 Drag to rotate</p>
                         <p>🔍 Scroll to zoom</p>
@@ -343,39 +358,49 @@
         </div>
 
     </main>
-<script>
-        $(document).ready(function() {
-            const container = document.querySelector('.globe-placeholder');
-            container.innerHTML = ''; // Clears the placeholder text
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const container = document.getElementById('globeViz');
+            const wrapper = document.getElementById('globe-container');
             
-            // Coordinates for the project datasets
+            // Your research project coordinates
             const analysisRegions = [
                 { lat: -28.4793, lng: 24.6727, label: 'South Africa (fMoW)', color: '#10b981' },
                 { lat: 35.8617, lng: 104.1954, label: 'China (MLRSNet)', color: '#ef4444' }
             ];
 
-            // Initialize the 3D Globe
-            const world = Globe()
-                (container)
-                .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
-                .backgroundColor('#0B1120')
-                .width(container.clientWidth)
-                .height(400)
-                .labelsData(analysisRegions)
-                .labelLat(d => d.lat)
-                .labelLng(d => d.lng)
-                .labelText(d => d.label)
-                .labelSize(1.5)
-                .labelDotRadius(0.8)
-                .labelColor(d => d.color)
-                .labelResolution(2);
+            try {
+                // Initialize the Globe
+                const world = Globe()
+                    (container)
+                    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+                    .backgroundColor('#0B1120')
+                    .width(wrapper.clientWidth) // Grabs the exact width of the box
+                    .height(400)
+                    .labelsData(analysisRegions)
+                    .labelLat(d => d.lat)
+                    .labelLng(d => d.lng)
+                    .labelText(d => d.label)
+                    .labelSize(1.5)
+                    .labelDotRadius(0.8)
+                    .labelColor(d => d.color)
+                    .labelResolution(2);
 
-            // Set up gentle auto-rotation and initial camera position
-            world.controls().autoRotate = true;
-            world.controls().autoRotateSpeed = 0.8;
-            world.pointOfView({ lat: 10, lng: 60, altitude: 2.2 });
+                world.controls().autoRotate = true;
+                world.controls().autoRotateSpeed = 0.8;
+                world.pointOfView({ lat: 5, lng: 65, altitude: 2.2 });
+                
+                // This prevents the globe from staying huge if the window shrinks
+                const resizeObserver = new ResizeObserver(() => {
+                    world.width(wrapper.clientWidth);
+                });
+                resizeObserver.observe(wrapper);
+
+            } catch (error) {
+                console.error("Globe.gl failed to load:", error);
+            }
         });
     </script>
-
 </body>
 </html>
