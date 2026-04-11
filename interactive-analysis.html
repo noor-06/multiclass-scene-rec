@@ -1,0 +1,924 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Analysis - TerraSustain Monitor</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-light: #ecfdf5;
+            --primary-dark: #059669;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --red-trend: #ef4444;
+            --red-bg: #fef2f2;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+
+        body { background-color: var(--bg-color); color: var(--text-dark); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Header */
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); padding: 12px 30px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000; flex-shrink: 0;
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-text h1 { font-size: 1.1rem; color: #0f172a; font-weight: 600; }
+        .logo-text p { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 6px; text-decoration: none;
+            color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+            padding: 8px 12px; border-radius: 6px; transition: all 0.2s;
+        }
+        .nav-links a.active { color: var(--primary); background: var(--primary-light); }
+        .nav-links svg { width: 16px; height: 16px; }
+
+        /* Main layout */
+        .app-body { display: flex; flex: 1; overflow: hidden; }
+
+        /* Left Sidebar */
+        .sidebar {
+            width: 280px; background: var(--card-bg); border-right: 1px solid var(--border-color);
+            padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; flex-shrink: 0;
+        }
+
+        .sidebar-section h4 {
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 10px;
+        }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-dark); margin-bottom: 6px; }
+
+        .location-list { display: flex; flex-direction: column; gap: 6px; }
+        .location-item {
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+            border-radius: 8px; border: 1px solid var(--border-color);
+            cursor: pointer; transition: all 0.2s; font-size: 0.85rem; color: var(--text-dark);
+        }
+        .location-item:hover { border-color: var(--primary); background: var(--primary-light); }
+        .location-item.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .location-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .location-dot.red { background: #ef4444; }
+        .location-dot.yellow { background: #eab308; }
+        .location-dot.green { background: var(--primary); }
+
+        .form-control {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+            border-radius: 8px; font-size: 0.85rem; color: var(--text-dark);
+            outline: none; background: var(--bg-color); transition: border 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); }
+
+        select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+
+        .run-btn {
+            width: 100%; padding: 11px; background: var(--primary); color: white;
+            border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            gap: 8px; transition: background 0.2s;
+        }
+        .run-btn:hover { background: var(--primary-dark); }
+        .run-btn svg { width: 16px; height: 16px; }
+
+        .map-layers { display: flex; flex-direction: column; gap: 8px; }
+        .layer-toggle { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--text-dark); cursor: pointer; }
+        .layer-toggle input[type="checkbox"] { accent-color: var(--primary); width: 15px; height: 15px; cursor: pointer; }
+        .layer-color-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+        /* Map area */
+        .map-container { flex: 1; position: relative; overflow: hidden; }
+        .map-view {
+            width: 100%; height: 100%; background: #1a1f2e;
+            position: relative; overflow: hidden;
+        }
+
+        /* Satellite image simulation */
+        .sat-image {
+            width: 100%; height: 100%; object-fit: cover; opacity: 0.9;
+            transition: opacity 0.4s;
+        }
+
+        /* Classification overlay */
+        .classification-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            opacity: 0; transition: opacity 0.5s;
+        }
+        .classification-overlay.visible { opacity: 0.55; }
+        .classification-overlay canvas { width: 100%; height: 100%; }
+
+        /* Heatmap overlay */
+        .heatmap-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            opacity: 0; transition: opacity 0.5s;
+        }
+        .heatmap-overlay.visible { opacity: 0.7; }
+
+        /* Map controls top-right */
+        .map-top-controls {
+            position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; z-index: 10;
+        }
+        .map-btn {
+            background: white; border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 8px 14px; font-size: 0.8rem; font-weight: 500; cursor: pointer;
+            display: flex; align-items: center; gap: 6px; color: var(--text-dark);
+            transition: all 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .map-btn:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+        .map-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .map-btn svg { width: 14px; height: 14px; }
+
+        /* Map zoom controls */
+        .zoom-controls {
+            position: absolute; bottom: 80px; right: 16px; display: flex; flex-direction: column;
+            gap: 4px; z-index: 10;
+        }
+        .zoom-btn {
+            background: white; border: 1px solid var(--border-color); border-radius: 6px;
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.1rem; font-weight: 600; color: var(--text-dark);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.2s;
+        }
+        .zoom-btn:hover { background: var(--primary-light); color: var(--primary); }
+
+        /* Scale bar */
+        .scale-bar {
+            position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9);
+            border-radius: 6px; padding: 6px 12px; font-size: 0.75rem; color: var(--text-dark);
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .scale-line { width: 60px; height: 3px; background: var(--text-dark); border-radius: 1px; }
+
+        /* Loading state */
+        .analysis-loading {
+            position: absolute; inset: 0; background: rgba(26,31,46,0.75);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .analysis-loading.visible { opacity: 1; pointer-events: all; }
+        .loading-spinner {
+            width: 48px; height: 48px; border: 3px solid rgba(16,185,129,0.3);
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin-bottom: 16px;
+        }
+        .loading-text { color: white; font-size: 0.9rem; font-weight: 500; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Right panel */
+        .results-panel {
+            width: 280px; background: var(--card-bg); border-left: 1px solid var(--border-color);
+            padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; flex-shrink: 0;
+        }
+
+        .results-section h4 {
+            font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 12px;
+        }
+
+        /* Classification legend */
+        .legend-items { display: flex; flex-direction: column; gap: 8px; }
+        .legend-row {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.85rem;
+        }
+        .legend-label { display: flex; align-items: center; gap: 8px; color: var(--text-dark); }
+        .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+        .legend-pct { font-weight: 600; color: var(--text-dark); }
+
+        .legend-bar-wrap { height: 4px; background: var(--border-color); border-radius: 2px; margin: 4px 0 8px; }
+        .legend-bar { height: 100%; border-radius: 2px; transition: width 1s ease; }
+
+        /* Donut chart placeholder */
+        .donut-wrap { display: flex; justify-content: center; margin: 12px 0; position: relative; }
+        .donut-svg { transform: rotate(-90deg); }
+        .donut-center-text {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-size: 0.75rem; color: var(--text-muted);
+        }
+        .donut-center-text strong { font-size: 1.1rem; color: var(--text-dark); }
+
+        /* Detected tags */
+        .detected-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag {
+            padding: 4px 12px; border-radius: 20px; font-size: 0.78rem;
+            font-weight: 600; border: 1.5px solid;
+        }
+
+        /* Area stats */
+        .stats-table { width: 100%; border-collapse: collapse; }
+        .stats-table td { padding: 8px 0; font-size: 0.82rem; border-bottom: 1px solid var(--border-color); }
+        .stats-table td:first-child { color: var(--text-muted); }
+        .stats-table td:last-child { text-align: right; font-weight: 600; color: var(--text-dark); }
+        .stats-table tr:last-child td { border-bottom: none; }
+
+        /* Confidence meter */
+        .confidence-meter { margin-top: 4px; }
+        .conf-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
+        .conf-label span:last-child { font-weight: 600; color: var(--primary); }
+        .conf-track { height: 6px; background: var(--border-color); border-radius: 3px; }
+        .conf-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--primary), #34d399); transition: width 1.2s ease; }
+
+        /* XAI toggle */
+        .xai-toggle-wrap { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-color); border-radius: 8px; border: 1px solid var(--border-color); }
+        .xai-toggle-wrap p { font-size: 0.82rem; font-weight: 500; color: var(--text-dark); }
+        .xai-toggle-wrap small { display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 1px; }
+        .toggle-switch { position: relative; width: 38px; height: 22px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; inset: 0; background: var(--border-color); border-radius: 22px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .toggle-slider:before {
+            content: ''; position: absolute; width: 16px; height: 16px;
+            background: white; border-radius: 50%; left: 3px; top: 3px; transition: 0.3s;
+        }
+        input:checked + .toggle-slider { background: var(--primary); }
+        input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+        /* Placeholder state */
+        .placeholder-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 30px 10px; color: var(--text-muted);
+        }
+        .placeholder-state svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.35; }
+        .placeholder-state p { font-size: 0.82rem; line-height: 1.5; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<header class="top-nav">
+    <div class="logo-area">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="8" fill="#0EA5E9"/>
+            <path d="M12 10V26M18 10V26M24 10V26" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M9 14C11.5 12 14.5 16 18 14C21.5 12 24.5 16 27 14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="logo-text">
+            <h1>TerraSustain Monitor</h1>
+            <p>Land Use Intelligence Platform</p>
+        </div>
+    </div>
+    <nav class="nav-links">
+        <a href="index.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            Dashboard
+        </a>
+        <a href="interactive-analysis.html" class="active">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+            Interactive Analysis
+        </a>
+        <a href="change-detection.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+            Change Detection
+        </a>
+        <a href="reporting.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Reporting
+        </a>
+        <a href="user-analysis.html">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            User Analysis
+        </a>
+    </nav>
+</header>
+
+<div class="app-body">
+    <!-- Left Sidebar: Controls -->
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <h4>Location Selection</h4>
+            <div class="location-list">
+                <div class="location-item active" data-loc="johannesburg" onclick="selectLocation(this)">
+                    <span class="location-dot red"></span> Johannesburg, South Africa
+                </div>
+                <div class="location-item" data-loc="capetown" onclick="selectLocation(this)">
+                    <span class="location-dot yellow"></span> Cape Town, South Africa
+                </div>
+                <div class="location-item" data-loc="beijing" onclick="selectLocation(this)">
+                    <span class="location-dot green"></span> Beijing, China
+                </div>
+                <div class="location-item" data-loc="shanghai" onclick="selectLocation(this)">
+                    <span class="location-dot green"></span> Shanghai, China
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <h4>Analysis Settings</h4>
+            <div class="form-group">
+                <label>Analysis Date</label>
+                <input type="date" class="form-control" value="2024-11-20" id="analysisDate">
+            </div>
+            <div class="form-group">
+                <label>Analysis Type</label>
+                <select class="form-control" id="analysisType">
+                    <option value="multi">Multi-class Classification</option>
+                    <option value="binary">Binary Classification</option>
+                    <option value="change">Change Detection</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Resolution</label>
+                <select class="form-control">
+                    <option>High (10m)</option>
+                    <option>Medium (30m)</option>
+                    <option>Low (100m)</option>
+                </select>
+            </div>
+            <button class="run-btn" onclick="runAnalysis()">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Run Analysis
+            </button>
+        </div>
+
+        <div class="sidebar-section">
+            <h4>Map Layers</h4>
+            <div class="map-layers">
+                <label class="layer-toggle">
+                    <input type="checkbox" checked onchange="toggleLayer('satellite', this)">
+                    <span class="layer-color-swatch" style="background:#3b82f6"></span>
+                    Satellite
+                </label>
+                <label class="layer-toggle">
+                    <input type="checkbox" id="classificationLayer" onchange="toggleLayer('classification', this)">
+                    <span class="layer-color-swatch" style="background:linear-gradient(135deg,#ef4444,#10b981)"></span>
+                    Classification
+                </label>
+                <label class="layer-toggle">
+                    <input type="checkbox" id="boundariesLayer" onchange="toggleLayer('boundaries', this)">
+                    <span class="layer-color-swatch" style="background:#f59e0b"></span>
+                    Boundaries
+                </label>
+                <label class="layer-toggle">
+                    <input type="checkbox" id="labelsLayer" onchange="toggleLayer('labels', this)">
+                    <span class="layer-color-swatch" style="background:#6b7280"></span>
+                    Labels
+                </label>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Map View -->
+    <div class="map-container">
+        <div class="map-view">
+            <!-- Satellite imagery (real aerial photo from public domain) -->
+            <img class="sat-image" id="satImage"
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/640px-Camponotus_flavomarginatus_ant.jpg"
+                alt="Satellite view"
+                onerror="this.style.display='none'"
+            >
+            <!-- Solid background fallback representing Johannesburg aerial view -->
+            <canvas id="mapCanvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+
+            <!-- Classification overlay canvas -->
+            <canvas id="classCanvas" class="classification-overlay" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity 0.5s;"></canvas>
+
+            <!-- Boundaries overlay -->
+            <canvas id="boundariesCanvas" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity 0.5s;pointer-events:none;"></canvas>
+
+            <!-- XAI Heatmap overlay -->
+            <canvas id="heatmapCanvas" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity 0.5s;pointer-events:none;"></canvas>
+
+            <!-- Top controls -->
+            <div class="map-top-controls">
+                <button class="map-btn active" id="btnSatellite" onclick="setMapMode('satellite')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Satellite
+                </button>
+                <button class="map-btn" id="btnClassify" onclick="setMapMode('classify')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                    Classification
+                </button>
+                <button class="map-btn" id="btnHeatmap" onclick="setMapMode('heatmap')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    AI Heatmap
+                </button>
+            </div>
+
+            <!-- Zoom controls -->
+            <div class="zoom-controls">
+                <button class="zoom-btn">+</button>
+                <button class="zoom-btn">−</button>
+            </div>
+
+            <!-- Scale -->
+            <div class="scale-bar">
+                <div class="scale-line"></div>
+                <span>2 km</span>
+            </div>
+
+            <!-- Loading overlay -->
+            <div class="analysis-loading" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <p class="loading-text" id="loadingText">Running AI classification...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel: Results -->
+    <aside class="results-panel">
+        <div class="results-section">
+            <h4>Classification Legend</h4>
+            <div id="placeholderState" class="placeholder-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                <p>Select a location and run analysis to see classification results.</p>
+            </div>
+            <div id="resultsContent" class="hidden">
+                <div class="legend-items" id="legendItems"></div>
+            </div>
+        </div>
+
+        <div class="results-section" id="donutSection" style="display:none">
+            <h4>Land Use Distribution</h4>
+            <div class="donut-wrap">
+                <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120" id="donutSvg"></svg>
+                <div class="donut-center-text">
+                    <strong id="donutTotal">—</strong>
+                    <span>Total</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="tagsSection" style="display:none">
+            <h4>Detected Categories</h4>
+            <div class="detected-tags" id="detectedTags"></div>
+        </div>
+
+        <div class="results-section" id="statsSection" style="display:none">
+            <h4>Area Statistics</h4>
+            <table class="stats-table" id="statsTable"></table>
+        </div>
+
+        <div class="results-section" id="confSection" style="display:none">
+            <h4>Model Confidence</h4>
+            <div class="confidence-meter">
+                <div class="conf-label">
+                    <span>Overall confidence</span>
+                    <span id="confPct">—</span>
+                </div>
+                <div class="conf-track">
+                    <div class="conf-fill" id="confFill" style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="xaiSection" style="display:none">
+            <h4>Explainability</h4>
+            <div class="xai-toggle-wrap">
+                <div>
+                    <p>AI Attention Heatmap</p>
+                    <small>Highlight model focus regions</small>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="xaiToggle" onchange="toggleXAI(this)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+    const locationData = {
+        johannesburg: {
+            name: 'Johannesburg, South Africa',
+            classes: [
+                { label: 'Urban', pct: 35, color: '#ef4444' },
+                { label: 'Farmland', pct: 28, color: '#f59e0b' },
+                { label: 'Forest', pct: 22, color: '#10b981' },
+                { label: 'Water', pct: 8,  color: '#3b82f6' },
+                { label: 'Barren', pct: 7,  color: '#9ca3af' }
+            ],
+            stats: { totalArea: '1,247 km²', analyzedPixels: '45.2M', confidence: '94.7%', confVal: 94.7 },
+            tags: [
+                { label: 'Urban', color: '#ef4444' },
+                { label: 'Farmland', color: '#f59e0b' },
+                { label: 'Forest', color: '#10b981' }
+            ],
+            mapColors: ['#ef4444','#f59e0b','#10b981','#3b82f6','#9ca3af']
+        },
+        capetown: {
+            name: 'Cape Town, South Africa',
+            classes: [
+                { label: 'Urban', pct: 28, color: '#ef4444' },
+                { label: 'Vegetation', pct: 38, color: '#10b981' },
+                { label: 'Water', pct: 18, color: '#3b82f6' },
+                { label: 'Farmland', pct: 10, color: '#f59e0b' },
+                { label: 'Barren', pct: 6,  color: '#9ca3af' }
+            ],
+            stats: { totalArea: '2,461 km²', analyzedPixels: '62.1M', confidence: '91.3%', confVal: 91.3 },
+            tags: [
+                { label: 'Urban', color: '#ef4444' },
+                { label: 'Vegetation', color: '#10b981' },
+                { label: 'Water', color: '#3b82f6' }
+            ],
+            mapColors: ['#ef4444','#10b981','#3b82f6','#f59e0b','#9ca3af']
+        },
+        beijing: {
+            name: 'Beijing, China',
+            classes: [
+                { label: 'Urban', pct: 52, color: '#ef4444' },
+                { label: 'Farmland', pct: 20, color: '#f59e0b' },
+                { label: 'Forest', pct: 16, color: '#10b981' },
+                { label: 'Water', pct: 6,  color: '#3b82f6' },
+                { label: 'Industrial', pct: 6,  color: '#8b5cf6' }
+            ],
+            stats: { totalArea: '16,411 km²', analyzedPixels: '120.4M', confidence: '92.8%', confVal: 92.8 },
+            tags: [
+                { label: 'Urban', color: '#ef4444' },
+                { label: 'Farmland', color: '#f59e0b' },
+                { label: 'Industrial', color: '#8b5cf6' }
+            ],
+            mapColors: ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6']
+        },
+        shanghai: {
+            name: 'Shanghai, China',
+            classes: [
+                { label: 'Urban', pct: 61, color: '#ef4444' },
+                { label: 'Water', pct: 14, color: '#3b82f6' },
+                { label: 'Farmland', pct: 13, color: '#f59e0b' },
+                { label: 'Industrial', pct: 8,  color: '#8b5cf6' },
+                { label: 'Forest', pct: 4,  color: '#10b981' }
+            ],
+            stats: { totalArea: '6,340 km²', analyzedPixels: '98.7M', confidence: '96.1%', confVal: 96.1 },
+            tags: [
+                { label: 'Urban', color: '#ef4444' },
+                { label: 'Water', color: '#3b82f6' },
+                { label: 'Industrial', color: '#8b5cf6' }
+            ],
+            mapColors: ['#ef4444','#3b82f6','#f59e0b','#8b5cf6','#10b981']
+        }
+    };
+
+    let currentLoc = 'johannesburg';
+    let analysisRun = false;
+    let mapCanvas, mapCtx, classCanvas, classCtx, boundariesCanvas, boundCtx, heatmapCanvas, heatCtx;
+
+    function initCanvases() {
+        const container = document.querySelector('.map-container');
+        const w = container.offsetWidth, h = container.offsetHeight;
+
+        [mapCanvas, classCanvas, boundariesCanvas, heatmapCanvas].forEach(c => {
+            if (c) { c.width = w; c.height = h; }
+        });
+
+        mapCanvas = document.getElementById('mapCanvas');
+        classCanvas = document.getElementById('classCanvas');
+        boundariesCanvas = document.getElementById('boundariesCanvas');
+        heatmapCanvas = document.getElementById('heatmapCanvas');
+        mapCanvas.width = w; mapCanvas.height = h;
+        classCanvas.width = w; classCanvas.height = h;
+        boundariesCanvas.width = w; boundariesCanvas.height = h;
+        heatmapCanvas.width = w; heatmapCanvas.height = h;
+
+        mapCtx = mapCanvas.getContext('2d');
+        classCtx = classCanvas.getContext('2d');
+        boundCtx = boundariesCanvas.getContext('2d');
+        heatCtx = heatmapCanvas.getContext('2d');
+
+        drawBaseMap();
+    }
+
+    function drawBaseMap() {
+        const w = mapCanvas.width, h = mapCanvas.height;
+        // Draw realistic-looking aerial map using canvas
+        const data = locationData[currentLoc];
+
+        // Background
+        mapCtx.fillStyle = '#2d3748';
+        mapCtx.fillRect(0, 0, w, h);
+
+        // Simulate urban grid texture
+        const seed = currentLoc.length * 137;
+        const rng = (n) => ((Math.sin(n * seed) * 43758.5453) % 1 + 1) % 1;
+
+        // Draw land patches
+        const patches = 180;
+        for (let i = 0; i < patches; i++) {
+            const x = rng(i * 3.1) * w;
+            const y = rng(i * 7.3) * h;
+            const s = 20 + rng(i * 11.7) * 120;
+            const typeIdx = Math.floor(rng(i * 17) * data.classes.length);
+            const col = data.classes[typeIdx].color;
+
+            mapCtx.globalAlpha = 0.25 + rng(i * 5) * 0.35;
+            mapCtx.fillStyle = col;
+            if (rng(i * 2) > 0.5) {
+                mapCtx.fillRect(x, y, s, s * (0.5 + rng(i) * 0.8));
+            } else {
+                mapCtx.beginPath();
+                mapCtx.arc(x, y, s / 2, 0, Math.PI * 2);
+                mapCtx.fill();
+            }
+        }
+        mapCtx.globalAlpha = 1;
+
+        // Draw roads (white lines)
+        mapCtx.strokeStyle = 'rgba(255,255,255,0.12)';
+        mapCtx.lineWidth = 1.5;
+        for (let i = 0; i < 12; i++) {
+            mapCtx.beginPath();
+            mapCtx.moveTo(rng(i * 5) * w, 0);
+            mapCtx.lineTo(rng(i * 8) * w, h);
+            mapCtx.stroke();
+            mapCtx.beginPath();
+            mapCtx.moveTo(0, rng(i * 3) * h);
+            mapCtx.lineTo(w, rng(i * 9) * h);
+            mapCtx.stroke();
+        }
+
+        // Grid overlay
+        mapCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+        mapCtx.lineWidth = 1;
+        for (let x = 0; x < w; x += 60) {
+            mapCtx.beginPath(); mapCtx.moveTo(x, 0); mapCtx.lineTo(x, h); mapCtx.stroke();
+        }
+        for (let y = 0; y < h; y += 60) {
+            mapCtx.beginPath(); mapCtx.moveTo(0, y); mapCtx.lineTo(w, y); mapCtx.stroke();
+        }
+    }
+
+    function drawClassification() {
+        const w = classCanvas.width, h = classCanvas.height;
+        const data = locationData[currentLoc];
+        classCtx.clearRect(0, 0, w, h);
+
+        const seed = currentLoc.length * 137;
+        const rng = (n) => ((Math.sin(n * seed) * 43758.5453) % 1 + 1) % 1;
+
+        // Draw classification blobs matching the percentages
+        let patchCount = 0;
+        data.classes.forEach((cls, ci) => {
+            const patches = Math.round(cls.pct * 1.5);
+            for (let i = 0; i < patches; i++) {
+                const idx = patchCount + i;
+                const x = rng(idx * 13.1 + ci) * w;
+                const y = rng(idx * 5.7 + ci * 3) * h;
+                const r = 30 + rng(idx * 7) * 80;
+
+                const gradient = classCtx.createRadialGradient(x, y, 0, x, y, r);
+                gradient.addColorStop(0, cls.color + 'cc');
+                gradient.addColorStop(1, cls.color + '00');
+                classCtx.fillStyle = gradient;
+                classCtx.beginPath();
+                classCtx.arc(x, y, r, 0, Math.PI * 2);
+                classCtx.fill();
+            }
+            patchCount += patches;
+        });
+    }
+
+    function drawBoundaries() {
+        const w = boundariesCanvas.width, h = boundariesCanvas.height;
+        boundCtx.clearRect(0, 0, w, h);
+        boundCtx.strokeStyle = '#f59e0b';
+        boundCtx.lineWidth = 2;
+        boundCtx.setLineDash([8, 4]);
+
+        // Draw a few boundary polygons
+        const polygons = [
+            [[0.1, 0.1], [0.45, 0.08], [0.48, 0.45], [0.12, 0.47]],
+            [[0.5, 0.1], [0.9, 0.12], [0.88, 0.5], [0.52, 0.48]],
+            [[0.1, 0.52], [0.45, 0.5], [0.47, 0.88], [0.1, 0.9]],
+            [[0.52, 0.52], [0.88, 0.52], [0.9, 0.88], [0.52, 0.9]],
+        ];
+
+        polygons.forEach(poly => {
+            boundCtx.beginPath();
+            poly.forEach(([x, y], i) => {
+                i === 0 ? boundCtx.moveTo(x * w, y * h) : boundCtx.lineTo(x * w, y * h);
+            });
+            boundCtx.closePath();
+            boundCtx.stroke();
+        });
+        boundCtx.setLineDash([]);
+    }
+
+    function drawHeatmap() {
+        const w = heatmapCanvas.width, h = heatmapCanvas.height;
+        heatCtx.clearRect(0, 0, w, h);
+        const seed = currentLoc.length * 137;
+        const rng = (n) => ((Math.sin(n * seed) * 43758.5453) % 1 + 1) % 1;
+
+        // Draw attention heatmap blobs (red = high attention)
+        const hotspots = 20;
+        for (let i = 0; i < hotspots; i++) {
+            const x = rng(i * 19.3) * w;
+            const y = rng(i * 7.1) * h;
+            const r = 40 + rng(i * 11) * 100;
+            const intensity = rng(i * 3);
+
+            const gradient = heatCtx.createRadialGradient(x, y, 0, x, y, r);
+            if (intensity > 0.6) {
+                gradient.addColorStop(0, 'rgba(239,68,68,0.8)');
+                gradient.addColorStop(0.4, 'rgba(245,158,11,0.5)');
+                gradient.addColorStop(1, 'rgba(16,185,129,0)');
+            } else if (intensity > 0.3) {
+                gradient.addColorStop(0, 'rgba(245,158,11,0.6)');
+                gradient.addColorStop(1, 'rgba(59,130,246,0)');
+            } else {
+                gradient.addColorStop(0, 'rgba(59,130,246,0.4)');
+                gradient.addColorStop(1, 'rgba(59,130,246,0)');
+            }
+            heatCtx.fillStyle = gradient;
+            heatCtx.beginPath();
+            heatCtx.arc(x, y, r, 0, Math.PI * 2);
+            heatCtx.fill();
+        }
+    }
+
+    function selectLocation(el) {
+        document.querySelectorAll('.location-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        currentLoc = el.dataset.loc;
+        analysisRun = false;
+        hideResults();
+        drawBaseMap();
+        classCanvas.style.opacity = '0';
+        boundariesCanvas.style.opacity = '0';
+        heatmapCanvas.style.opacity = '0';
+        document.getElementById('btnClassify').classList.remove('active');
+        document.getElementById('btnSatellite').classList.add('active');
+        document.getElementById('btnHeatmap').classList.remove('active');
+        const xaiToggle = document.getElementById('xaiToggle');
+        if (xaiToggle) xaiToggle.checked = false;
+    }
+
+    function runAnalysis() {
+        const loading = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        loading.style.opacity = '1';
+        loading.style.pointerEvents = 'all';
+
+        const steps = ['Preprocessing image...', 'Extracting features (CNN backbone)...', 'Applying attention mechanism...', 'Running multi-label classification...', 'Generating results...'];
+        let step = 0;
+        const interval = setInterval(() => {
+            if (step < steps.length) { loadingText.textContent = steps[step++]; }
+            else {
+                clearInterval(interval);
+                loading.style.opacity = '0';
+                loading.style.pointerEvents = 'none';
+                analysisRun = true;
+                drawClassification();
+                drawBoundaries();
+                drawHeatmap();
+                setMapMode('classify');
+                showResults();
+            }
+        }, 600);
+    }
+
+    function showResults() {
+        const data = locationData[currentLoc];
+        document.getElementById('placeholderState').classList.add('hidden');
+        document.getElementById('resultsContent').classList.remove('hidden');
+        document.getElementById('donutSection').style.display = '';
+        document.getElementById('tagsSection').style.display = '';
+        document.getElementById('statsSection').style.display = '';
+        document.getElementById('confSection').style.display = '';
+        document.getElementById('xaiSection').style.display = '';
+
+        // Legend
+        const legendEl = document.getElementById('legendItems');
+        legendEl.innerHTML = data.classes.map(c => `
+            <div class="legend-row">
+                <span class="legend-label">
+                    <span class="legend-swatch" style="background:${c.color}"></span>
+                    ${c.label}
+                </span>
+                <span class="legend-pct">${c.pct}%</span>
+            </div>
+            <div class="legend-bar-wrap">
+                <div class="legend-bar" style="width:0%;background:${c.color}" data-w="${c.pct}"></div>
+            </div>
+        `).join('');
+        setTimeout(() => {
+            document.querySelectorAll('.legend-bar').forEach(b => b.style.width = b.dataset.w + '%');
+        }, 50);
+
+        // Donut
+        drawDonut(data.classes);
+
+        // Tags
+        document.getElementById('detectedTags').innerHTML = data.tags.map(t => `
+            <span class="tag" style="color:${t.color};border-color:${t.color};background:${t.color}18">${t.label}</span>
+        `).join('');
+
+        // Stats
+        document.getElementById('statsTable').innerHTML = `
+            <tr><td>Total Area</td><td>${data.stats.totalArea}</td></tr>
+            <tr><td>Analyzed Pixels</td><td>${data.stats.analyzedPixels}</td></tr>
+            <tr><td>Confidence</td><td>${data.stats.confidence}</td></tr>
+        `;
+
+        // Confidence
+        document.getElementById('confPct').textContent = data.stats.confidence;
+        setTimeout(() => {
+            document.getElementById('confFill').style.width = data.stats.confVal + '%';
+        }, 100);
+    }
+
+    function hideResults() {
+        document.getElementById('placeholderState').classList.remove('hidden');
+        document.getElementById('resultsContent').classList.add('hidden');
+        ['donutSection','tagsSection','statsSection','confSection','xaiSection'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+    }
+
+    function drawDonut(classes) {
+        const svg = document.getElementById('donutSvg');
+        const cx = 60, cy = 60, r = 46, strokeW = 18;
+        const circumference = 2 * Math.PI * r;
+        let offset = 0;
+        svg.innerHTML = '';
+
+        // Background circle
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bg.setAttribute('cx', cx); bg.setAttribute('cy', cy); bg.setAttribute('r', r);
+        bg.setAttribute('fill', 'none'); bg.setAttribute('stroke', '#f3f4f6'); bg.setAttribute('stroke-width', strokeW);
+        svg.appendChild(bg);
+
+        classes.forEach(c => {
+            const dash = (c.pct / 100) * circumference;
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); circle.setAttribute('r', r);
+            circle.setAttribute('fill', 'none'); circle.setAttribute('stroke', c.color); circle.setAttribute('stroke-width', strokeW - 2);
+            circle.setAttribute('stroke-dasharray', `${dash} ${circumference - dash}`);
+            circle.setAttribute('stroke-dashoffset', -offset);
+            circle.setAttribute('stroke-linecap', 'butt');
+            svg.appendChild(circle);
+            offset += dash;
+        });
+
+        document.getElementById('donutTotal').textContent = locationData[currentLoc].stats.totalArea;
+    }
+
+    function setMapMode(mode) {
+        document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
+
+        if (mode === 'satellite') {
+            document.getElementById('btnSatellite').classList.add('active');
+            if (analysisRun) {
+                classCanvas.style.opacity = '0';
+                heatmapCanvas.style.opacity = '0';
+            }
+        } else if (mode === 'classify') {
+            document.getElementById('btnClassify').classList.add('active');
+            if (analysisRun) {
+                classCanvas.style.opacity = '0.6';
+                heatmapCanvas.style.opacity = '0';
+            }
+        } else if (mode === 'heatmap') {
+            document.getElementById('btnHeatmap').classList.add('active');
+            if (analysisRun) {
+                classCanvas.style.opacity = '0';
+                heatmapCanvas.style.opacity = '0.75';
+            }
+        }
+    }
+
+    function toggleLayer(layer, checkbox) {
+        if (layer === 'classification') {
+            classCanvas.style.opacity = checkbox.checked && analysisRun ? '0.6' : '0';
+        } else if (layer === 'boundaries') {
+            boundariesCanvas.style.opacity = checkbox.checked && analysisRun ? '0.8' : '0';
+        }
+    }
+
+    function toggleXAI(checkbox) {
+        if (checkbox.checked && analysisRun) {
+            heatmapCanvas.style.opacity = '0.75';
+            setMapMode('heatmap');
+        } else {
+            heatmapCanvas.style.opacity = '0';
+            setMapMode('classify');
+        }
+    }
+
+    window.addEventListener('load', () => {
+        initCanvases();
+    });
+    window.addEventListener('resize', () => {
+        initCanvases();
+        if (analysisRun) {
+            drawClassification();
+            drawBoundaries();
+            drawHeatmap();
+        }
+    });
+</script>
+</body>
+</html>
