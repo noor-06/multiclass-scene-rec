@@ -1,1 +1,726 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporting - TerraSustain Monitor</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-light: #ecfdf5;
+            --primary-dark: #059669;
+            --text-dark: #1f2937;
+            --text-muted: #6b7280;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --red: #ef4444;
+            --red-bg: #fef2f2;
+            --yellow: #f59e0b;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-color); color: var(--text-dark); min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* ── Nav ── */
+        .top-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); padding: 12px 30px;
+            border-bottom: 1px solid var(--border-color); z-index: 1000; flex-shrink: 0;
+            position: sticky;
+            top: 0;
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-text h1 { font-size: 1.1rem; color: #0f172a; font-weight: 600; }
+        .logo-text p { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+        .nav-links { display: flex; gap: 8px; }
+        .nav-links a {
+            display: flex; align-items: center; gap: 6px; text-decoration: none;
+            color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+            padding: 8px 12px; border-radius: 6px; transition: all 0.2s;
+        }
+        .nav-links a.active { color: var(--primary); background: var(--primary-light); }
+        .nav-links svg { width: 16px; height: 16px; }
+
+        /* ── Page ── */
+        .page-body { flex: 1; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+
+        /* ── Page header ── */
+        .page-header { display: flex; justify-content: space-between; align-items: center; }
+        .page-header h2 { font-size: 1.35rem; font-weight: 700; color: var(--text-dark); }
+        .page-header p { font-size: 0.85rem; color: var(--text-muted); margin-top: 3px; }
+
+        /* ── Grid layout ── */
+        .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+
+        /* ── Card ── */
+        .card {
+            background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 20px;
+        }
+        .card-title {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 14px;
+        }
+
+        /* ── Form elements ── */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; }
+        .form-control {
+            width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+            border-radius: 8px; font-size: 0.85rem; color: var(--text-dark);
+            outline: none; background: var(--bg-color); transition: border 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); }
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 12px center;
+        }
+        .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        /* ── Section checkboxes ── */
+        .section-label { font-size: 0.8rem; font-weight: 600; color: var(--text-dark); margin-bottom: 10px; }
+        .include-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+        .include-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+            cursor: pointer; font-size: 0.82rem; transition: all 0.2s; user-select: none;
+        }
+        .include-item.checked { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+        .include-item.disabled { opacity: 0.45; cursor: default; }
+        .include-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .include-check {
+            width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
+        }
+        .include-item.checked .include-check { background: var(--primary); border-color: var(--primary); }
+        .include-check svg { width: 10px; height: 10px; color: white; }
+
+        /* ── Export options ── */
+        .export-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .export-option {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border-color);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .export-option:hover { border-color: var(--primary); background: var(--primary-light); }
+        .export-option.downloading { border-color: var(--primary); background: var(--primary-light); }
+        .export-left { display: flex; align-items: center; gap: 10px; }
+        .export-icon {
+            width: 34px; height: 34px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .export-icon svg { width: 16px; height: 16px; }
+        .export-name { font-size: 0.85rem; font-weight: 600; color: var(--text-dark); }
+        .export-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+        .export-action {
+            background: none; border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 5px 10px; font-size: 0.78rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 5px; color: var(--text-muted);
+            transition: all 0.2s;
+        }
+        .export-action:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .export-action svg { width: 12px; height: 12px; }
+
+        /* ── Report details summary ── */
+        .report-details { background: var(--bg-color); border-radius: 8px; padding: 12px 14px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.82rem; border-bottom: 1px solid var(--border-color); }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row span:first-child { color: var(--text-muted); }
+        .detail-row span:last-child { font-weight: 600; color: var(--text-dark); }
+
+        /* ── Preview panel ── */
+        .preview-panel { display: flex; flex-direction: column; gap: 16px; }
+
+        .preview-toggle-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 10px; cursor: pointer; transition: all 0.2s;
+        }
+        .preview-toggle-bar:hover { border-color: var(--primary); }
+        .preview-toggle-bar h4 { font-size: 0.9rem; font-weight: 600; }
+        .preview-toggle-bar .toggle-icon { color: var(--text-muted); transition: transform 0.2s; }
+        .preview-toggle-bar.open .toggle-icon { transform: rotate(180deg); }
+        .preview-toggle-bar svg { width: 16px; height: 16px; }
+
+        /* ── Preview Document ── */
+        .preview-document {
+            background: white; border: 1px solid var(--border-color); border-radius: 12px;
+            overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+
+        .doc-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+            padding: 28px 32px; color: white;
+        }
+        .doc-header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .doc-logo { display: flex; align-items: center; gap: 10px; }
+        .doc-logo-text h3 { font-size: 1rem; font-weight: 700; }
+        .doc-logo-text p { font-size: 0.72rem; opacity: 0.6; margin-top: 2px; }
+        .doc-badge { background: rgba(16,185,129,0.25); border: 1px solid rgba(16,185,129,0.4); color: #6ee7b7; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+        .doc-title h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+        .doc-title p { font-size: 0.82rem; opacity: 0.6; }
+        .doc-meta { display: flex; gap: 24px; margin-top: 16px; }
+        .doc-meta-item { font-size: 0.75rem; opacity: 0.6; }
+        .doc-meta-item strong { display: block; opacity: 1; color: white; font-size: 0.85rem; margin-bottom: 2px; }
+
+        .doc-body { padding: 24px 32px; }
+
+        .doc-section { margin-bottom: 24px; }
+        .doc-section-title {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--text-muted); border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px; margin-bottom: 12px;
+        }
+        .doc-summary-text { font-size: 0.85rem; color: var(--text-muted); line-height: 1.7; }
+
+        .doc-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+        .doc-kpi {
+            background: var(--bg-color); border-radius: 8px; padding: 14px;
+            border-left: 3px solid var(--primary);
+        }
+        .doc-kpi.red { border-left-color: var(--red); }
+        .doc-kpi.yellow { border-left-color: var(--yellow); }
+        .doc-kpi label { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; display: block; margin-bottom: 4px; }
+        .doc-kpi strong { font-size: 1.15rem; font-weight: 700; color: var(--text-dark); }
+        .doc-kpi span { display: block; font-size: 0.72rem; margin-top: 2px; }
+        .doc-kpi span.red { color: var(--red); }
+        .doc-kpi span.green { color: var(--primary); }
+
+        /* Classification map placeholder */
+        .doc-map-placeholder {
+            height: 180px; background: #1a1f2e; border-radius: 8px; position: relative; overflow: hidden;
+        }
+        .doc-map-placeholder canvas { width: 100%; height: 100%; }
+        .doc-map-legend {
+            position: absolute; bottom: 10px; left: 10px; display: flex; gap: 8px;
+            background: rgba(255,255,255,0.9); padding: 6px 10px; border-radius: 6px;
+        }
+        .map-legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #333; }
+        .map-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* Horizontal bar chart in doc */
+        .doc-bar-chart { display: flex; flex-direction: column; gap: 8px; }
+        .doc-bar-row { display: flex; align-items: center; gap: 10px; }
+        .doc-bar-label { font-size: 0.78rem; color: var(--text-muted); width: 80px; flex-shrink: 0; text-align: right; }
+        .doc-bar-track { flex: 1; height: 16px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+        .doc-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; transition: width 1.2s ease; }
+        .doc-bar-fill span { font-size: 0.68rem; font-weight: 700; color: white; }
+
+        /* change table */
+        .doc-change-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .doc-change-table th { background: var(--bg-color); padding: 8px 10px; text-align: left; font-weight: 600; font-size: 0.75rem; color: var(--text-muted); }
+        .doc-change-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
+        .doc-change-table tr:last-child td { border-bottom: none; }
+        .change-pill { padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+
+        /* ── Action buttons ── */
+        .action-row { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+        .btn-primary {
+            background: var(--primary); color: white; border: none;
+            padding: 10px 20px; border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 7px; transition: background 0.2s;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary {
+            background: white; color: var(--text-dark); border: 1px solid var(--border-color);
+            padding: 10px 20px; border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 7px; transition: all 0.2s;
+        }
+        .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary svg, .btn-secondary svg { width: 15px; height: 15px; }
+
+        /* toast */
+        .toast {
+            position: fixed; bottom: 28px; right: 28px; background: var(--text-dark); color: white;
+            padding: 12px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 500;
+            display: flex; align-items: center; gap: 8px; z-index: 9999;
+            transform: translateY(80px); opacity: 0; transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast svg { width: 16px; height: 16px; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<header class="top-nav">
+    <div class="logo-area">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect width="36" height="36" rx="8" fill="#0EA5E9"/>
+            <path d="M12 10V26M18 10V26M24 10V26" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M9 14C11.5 12 14.5 16 18 14C21.5 12 24.5 16 27 14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="logo-text">
+            <h1>TerraSustain Monitor</h1>
+            <p>Land Use Intelligence Platform</p>
+        </div>
+    </div>
+    <nav class="nav-links">
+        <a href="index.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>Dashboard</a>
+        <a href="interactive-analysis.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>Interactive Analysis</a>
+        <a href="change-detection.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>Change Detection</a>
+        <a href="reporting.html" class="active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Reporting</a>
+        <a href="user-analysis.html"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>User Analysis</a>
+    </nav>
+</header>
+
+<div class="page-body">
+    <div class="page-header">
+        <div>
+            <h2>Report Generation &amp; Export</h2>
+            <p>Create professional reports from your land-use analysis</p>
+        </div>
+    </div>
+
+    <div class="main-grid">
+
+        <!-- ── Left: Config ── -->
+        <div style="display:flex;flex-direction:column;gap:16px;">
+
+            <!-- Report Configuration -->
+            <div class="card">
+                <div class="card-title">Report Configuration</div>
+                <div class="form-group">
+                    <label>Report Title</label>
+                    <input type="text" class="form-control" id="reportTitle" value="Urban Growth Report for Johannesburg, 2020–2024" placeholder="e.g., Urban Growth Report for Johannesburg, 2020–2024">
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <select class="form-control" id="reportRegion" onchange="updatePreview()">
+                        <option value="johannesburg">Johannesburg, South Africa</option>
+                        <option value="capetown">Cape Town, South Africa</option>
+                        <option value="beijing">Beijing, China</option>
+                        <option value="shanghai">Shanghai, China</option>
+                    </select>
+                </div>
+                <div class="form-group date-row">
+                    <div>
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" value="2020-01-01">
+                    </div>
+                    <div>
+                        <label>End Date</label>
+                        <input type="date" class="form-control" value="2024-11-20">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Report Type</label>
+                    <select class="form-control" onchange="updatePreview()">
+                        <option>Executive Summary</option>
+                        <option>Full Technical Report</option>
+                        <option>Change Detection Only</option>
+                        <option>Classification Summary</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Include Elements -->
+            <div class="card">
+                <div class="card-title">Include Elements</div>
+                <div class="include-grid" id="includeGrid">
+                    <div class="include-item checked" onclick="toggleInclude(this)" data-key="summary">
+                        <div class="include-check"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Summary
+                    </div>
+                    <div class="include-item checked" onclick="toggleInclude(this)" data-key="maps">
+                        <div class="include-check"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                        Maps
+                    </div>
+                    <div class="include-item checked" onclick="toggleInclude(this)" data-key="statistics">
+                        <div class="include-check"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Statistics
+                    </div>
+                    <div class="include-item checked" onclick="toggleInclude(this)" data-key="charts">
+                        <div class="include-check"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                        Charts
+                    </div>
+                    <div class="include-item disabled" data-key="change">
+                        <div class="include-check"></div>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        Change Detection
+                    </div>
+                    <div class="include-item disabled" data-key="recs">
+                        <div class="include-check"></div>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                        Recommendations
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Options -->
+            <div class="card">
+                <div class="card-title">Export Options</div>
+                <div class="export-options">
+                    <div class="export-option" id="expPdf">
+                        <div class="export-left">
+                            <div class="export-icon" style="background:#fef2f2;color:#ef4444">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <div>
+                                <div class="export-name">Export as PDF</div>
+                                <div class="export-desc">Shareable document · ~4.2 MB</div>
+                            </div>
+                        </div>
+                        <button class="export-action" onclick="doExport('PDF')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download
+                        </button>
+                    </div>
+                    <div class="export-option" id="expGeoTiff">
+                        <div class="export-left">
+                            <div class="export-icon" style="background:#eff6ff;color:#3b82f6">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div>
+                                <div class="export-name">Export as GeoTIFF</div>
+                                <div class="export-desc">GIS-compatible raster · ~18 MB</div>
+                            </div>
+                        </div>
+                        <button class="export-action" onclick="doExport('GeoTIFF')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download
+                        </button>
+                    </div>
+                    <div class="export-option" id="expCsv">
+                        <div class="export-left">
+                            <div class="export-icon" style="background:#f0fdf4;color:#10b981">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <div>
+                                <div class="export-name">Export as CSV</div>
+                                <div class="export-desc">Raw data table · ~0.3 MB</div>
+                            </div>
+                        </div>
+                        <button class="export-action" onclick="doExport('CSV')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download
+                        </button>
+                    </div>
+                    <div class="export-option" id="expShp">
+                        <div class="export-left">
+                            <div class="export-icon" style="background:#fdf4ff;color:#8b5cf6">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </div>
+                            <div>
+                                <div class="export-name">Export as Shapefile</div>
+                                <div class="export-desc">Vector boundaries · ~2.1 MB</div>
+                            </div>
+                        </div>
+                        <button class="export-action" onclick="doExport('Shapefile')">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-title" style="margin-top:4px;">Report Details</div>
+                <div class="report-details">
+                    <div class="detail-row"><span>Included Sections</span><span id="detailSections">4</span></div>
+                    <div class="detail-row"><span>Estimated Pages</span><span>11</span></div>
+                    <div class="detail-row"><span>File Size (PDF)</span><span>~4.2 MB</span></div>
+                    <div class="detail-row"><span>Region</span><span id="detailRegion">Johannesburg, ZAF</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Right: Preview ── -->
+        <div class="preview-panel">
+
+            <!-- Toggle bar -->
+            <div class="preview-toggle-bar open" id="previewToggle" onclick="togglePreview()">
+                <h4>
+                    <svg style="width:16px;height:16px;display:inline;vertical-align:-3px;margin-right:6px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    Report Preview
+                </h4>
+                <span class="toggle-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></span>
+            </div>
+
+            <!-- Document preview -->
+            <div class="preview-document" id="previewDoc">
+                <!-- Document Header -->
+                <div class="doc-header">
+                    <div class="doc-header-top">
+                        <div class="doc-logo">
+                            <svg width="32" height="32" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="#0EA5E9"/><path d="M12 10V26M18 10V26M24 10V26" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M9 14C11.5 12 14.5 16 18 14C21.5 12 24.5 16 27 14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+                            <div class="doc-logo-text">
+                                <h3>TerraSustain Monitor</h3>
+                                <p>Land Use Intelligence Platform</p>
+                            </div>
+                        </div>
+                        <span class="doc-badge">Executive Summary</span>
+                    </div>
+                    <div class="doc-title">
+                        <h2 id="previewTitle">Urban Growth Report for Johannesburg, 2020–2024</h2>
+                        <p>Automated AI-generated land-use change analysis</p>
+                    </div>
+                    <div class="doc-meta">
+                        <div class="doc-meta-item"><strong id="previewRegionLabel">Johannesburg, South Africa</strong>Region</div>
+                        <div class="doc-meta-item"><strong>Jan 2020 – Nov 2024</strong>Period</div>
+                        <div class="doc-meta-item"><strong id="previewDate">Apr 11, 2026</strong>Generated</div>
+                    </div>
+                </div>
+
+                <!-- Document Body -->
+                <div class="doc-body">
+                    <!-- Executive Summary -->
+                    <div class="doc-section" id="prevSummary">
+                        <div class="doc-section-title">Executive Summary</div>
+                        <p class="doc-summary-text" id="prevSummaryText">This report provides a comprehensive analysis of land-use changes in the specified region. Key findings indicate significant urban expansion and changes in vegetation coverage during the reporting period. The AI model achieved a classification confidence of 94.7%, with attention heatmaps confirming focus on structural and spectral features.</p>
+                    </div>
+
+                    <!-- KPIs -->
+                    <div class="doc-section" id="prevStats">
+                        <div class="doc-section-title">Key Statistics</div>
+                        <div class="doc-kpi-row" id="prevKpiRow"></div>
+                    </div>
+
+                    <!-- Map -->
+                    <div class="doc-section" id="prevMaps">
+                        <div class="doc-section-title">Classification Map</div>
+                        <div class="doc-map-placeholder">
+                            <canvas id="previewMapCanvas"></canvas>
+                            <div class="doc-map-legend" id="prevMapLegend"></div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="doc-section" id="prevCharts">
+                        <div class="doc-section-title">Land Use Distribution</div>
+                        <div class="doc-bar-chart" id="prevBarChart"></div>
+                    </div>
+
+                    <!-- Change table (locked) -->
+                    <div class="doc-section" style="opacity:0.4">
+                        <div class="doc-section-title">Change Detection</div>
+                        <div style="background:var(--bg-color);border-radius:8px;padding:18px;text-align:center;font-size:0.82rem;color:var(--text-muted);">
+                            <svg style="width:24px;height:24px;margin-bottom:8px;display:block;margin-inline:auto;opacity:0.4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            Enable Change Detection section above to include this
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="btn-secondary" onclick="togglePreview()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                    Hide Preview
+                </button>
+                <button class="btn-primary" onclick="doExport('PDF')">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download PDF Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    <span id="toastMsg">Export started</span>
+</div>
+
+<script>
+    const regionData = {
+        johannesburg: {
+            label: 'Johannesburg, South Africa', short: 'Johannesburg, ZAF',
+            summary: 'This report provides a comprehensive analysis of land-use changes in Johannesburg. Key findings indicate significant urban expansion (+12.4%) and vegetation loss (-78 km²) during the 2020–2024 period. The AI model achieved 94.7% classification confidence.',
+            kpis: [
+                { label: 'Total Area Analyzed', val: '1,247 km²', note: '', cls: '' },
+                { label: 'Net Urban Growth', val: '+12.4%', note: '+125 km²', cls: 'red' },
+                { label: 'Vegetation Loss', val: '-78 km²', note: 'Since 2020', cls: 'red' },
+            ],
+            bars: [
+                { label: 'Urban', pct: 35, color: '#ef4444' },
+                { label: 'Farmland', pct: 28, color: '#f59e0b' },
+                { label: 'Forest', pct: 22, color: '#10b981' },
+                { label: 'Water', pct: 8, color: '#3b82f6' },
+                { label: 'Barren', pct: 7, color: '#9ca3af' },
+            ],
+            mapColors: ['#ef4444','#f59e0b','#10b981','#3b82f6','#9ca3af'],
+        },
+        capetown: {
+            label: 'Cape Town, South Africa', short: 'Cape Town, ZAF',
+            summary: 'This report details land-use dynamics in Cape Town from 2020–2024. Notable trends include coastal urban growth (+9.1%) and reduction in indigenous vegetation cover. AI confidence score: 91.3%.',
+            kpis: [
+                { label: 'Total Area Analyzed', val: '2,461 km²', note: '', cls: '' },
+                { label: 'Net Urban Growth', val: '+9.1%', note: '+97 km²', cls: 'red' },
+                { label: 'Vegetation Loss', val: '-54 km²', note: 'Since 2020', cls: 'red' },
+            ],
+            bars: [
+                { label: 'Vegetation', pct: 38, color: '#10b981' },
+                { label: 'Urban', pct: 28, color: '#ef4444' },
+                { label: 'Water', pct: 18, color: '#3b82f6' },
+                { label: 'Farmland', pct: 10, color: '#f59e0b' },
+                { label: 'Barren', pct: 6, color: '#9ca3af' },
+            ],
+            mapColors: ['#10b981','#ef4444','#3b82f6','#f59e0b','#9ca3af'],
+        },
+        beijing: {
+            label: 'Beijing, China', short: 'Beijing, CHN',
+            summary: 'Beijing exhibits the highest rate of urban expansion among monitored regions, with an 18.7% overall change rate over the 2020–2024 window. Industrial land expanded significantly alongside residential zones. AI confidence: 92.8%.',
+            kpis: [
+                { label: 'Total Area Analyzed', val: '16,411 km²', note: '', cls: '' },
+                { label: 'Net Urban Growth', val: '+18.7%', note: '+340 km²', cls: 'red' },
+                { label: 'Vegetation Loss', val: '-130 km²', note: 'Since 2020', cls: 'red' },
+            ],
+            bars: [
+                { label: 'Urban', pct: 52, color: '#ef4444' },
+                { label: 'Farmland', pct: 20, color: '#f59e0b' },
+                { label: 'Forest', pct: 16, color: '#10b981' },
+                { label: 'Water', pct: 6, color: '#3b82f6' },
+                { label: 'Industrial', pct: 6, color: '#8b5cf6' },
+            ],
+            mapColors: ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6'],
+        },
+        shanghai: {
+            label: 'Shanghai, China', short: 'Shanghai, CHN',
+            summary: 'Shanghai shows the highest urban density among analyzed regions, with 61% of area classified as urban. Rapid conversion of farmland and coastal zones is the primary driver of a 21.3% overall change rate. AI confidence: 96.1%.',
+            kpis: [
+                { label: 'Total Area Analyzed', val: '6,340 km²', note: '', cls: '' },
+                { label: 'Net Urban Growth', val: '+21.3%', note: '+415 km²', cls: 'red' },
+                { label: 'Vegetation Loss', val: '-88 km²', note: 'Since 2020', cls: 'red' },
+            ],
+            bars: [
+                { label: 'Urban', pct: 61, color: '#ef4444' },
+                { label: 'Water', pct: 14, color: '#3b82f6' },
+                { label: 'Farmland', pct: 13, color: '#f59e0b' },
+                { label: 'Industrial', pct: 8, color: '#8b5cf6' },
+                { label: 'Forest', pct: 4, color: '#10b981' },
+            ],
+            mapColors: ['#ef4444','#3b82f6','#f59e0b','#8b5cf6','#10b981'],
+        },
+    };
+
+    let checkedCount = 4;
+
+    function toggleInclude(el) {
+        if (el.classList.contains('disabled')) return;
+        el.classList.toggle('checked');
+        checkedCount = document.querySelectorAll('.include-item.checked').length;
+        document.getElementById('detailSections').textContent = checkedCount;
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const region = document.getElementById('reportRegion').value;
+        const d = regionData[region];
+        document.getElementById('previewTitle').textContent = document.getElementById('reportTitle').value || 'Land Use Report';
+        document.getElementById('previewRegionLabel').textContent = d.label;
+        document.getElementById('detailRegion').textContent = d.short;
+        document.getElementById('prevSummaryText').textContent = d.summary;
+
+        // KPIs
+        document.getElementById('prevKpiRow').innerHTML = d.kpis.map(k => `
+            <div class="doc-kpi ${k.cls}">
+                <label>${k.label}</label>
+                <strong>${k.val}</strong>
+                <span class="${k.cls}">${k.note}</span>
+            </div>
+        `).join('');
+
+        // Bar chart
+        const maxPct = Math.max(...d.bars.map(b => b.pct));
+        document.getElementById('prevBarChart').innerHTML = d.bars.map(b => `
+            <div class="doc-bar-row">
+                <span class="doc-bar-label">${b.label}</span>
+                <div class="doc-bar-track">
+                    <div class="doc-bar-fill" style="width:0%;background:${b.color}" data-w="${(b.pct/maxPct*100).toFixed(0)}">
+                        <span>${b.pct}%</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        setTimeout(() => {
+            document.querySelectorAll('.doc-bar-fill').forEach(b => b.style.width = b.dataset.w + '%');
+        }, 60);
+
+        // Map legend
+        document.getElementById('prevMapLegend').innerHTML = d.bars.slice(0,4).map(b => `
+            <div class="map-legend-item">
+                <div class="map-legend-dot" style="background:${b.color}"></div>${b.label}
+            </div>
+        `).join('');
+
+        drawPreviewMap(region);
+
+        // Section visibility
+        const checks = { summary: true, maps: true, statistics: true, charts: true };
+        document.querySelectorAll('.include-item.checked').forEach(el => checks[el.dataset.key] = true);
+        document.querySelectorAll('.include-item:not(.checked)').forEach(el => delete checks[el.dataset.key]);
+        document.getElementById('prevSummary').style.display = checks.summary !== undefined ? '' : 'none';
+        document.getElementById('prevStats').style.display = checks.statistics !== undefined ? '' : 'none';
+        document.getElementById('prevMaps').style.display = checks.maps !== undefined ? '' : 'none';
+        document.getElementById('prevCharts').style.display = checks.charts !== undefined ? '' : 'none';
+    }
+
+    function drawPreviewMap(region) {
+        const canvas = document.getElementById('previewMapCanvas');
+        const container = canvas.parentElement;
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        const d = regionData[region];
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, w, h);
+
+        const seed = region.length * 137;
+        const rng = n => ((Math.sin(n * seed) * 43758.5453) % 1 + 1) % 1;
+
+        for (let i = 0; i < 150; i++) {
+            const x = rng(i * 3.1) * w, y = rng(i * 7.3) * h;
+            const s = 12 + rng(i * 11.7) * 70;
+            const col = d.mapColors[Math.floor(rng(i * 17) * d.mapColors.length)];
+            ctx.globalAlpha = 0.3 + rng(i * 5) * 0.4;
+            ctx.fillStyle = col;
+            if (rng(i * 2) > 0.5) {
+                ctx.fillRect(x, y, s, s * (0.4 + rng(i) * 0.8));
+            } else {
+                ctx.beginPath(); ctx.arc(x, y, s / 2, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+        for (let y = 0; y < h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+    }
+
+    function togglePreview() {
+        const doc = document.getElementById('previewDoc');
+        const bar = document.getElementById('previewToggle');
+        const isOpen = bar.classList.toggle('open');
+        doc.style.display = isOpen ? '' : 'none';
+    }
+
+    function doExport(format) {
+        showToast(`${format} export initiated — file will download shortly.`);
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3200);
+    }
+
+    // Init
+    document.getElementById('reportTitle').addEventListener('input', updatePreview);
+    document.getElementById('previewDate').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    window.addEventListener('load', updatePreview);
+    window.addEventListener('resize', () => {
+        const region = document.getElementById('reportRegion').value;
+        drawPreviewMap(region);
+    });
+</script>
+</body>
+</html>
