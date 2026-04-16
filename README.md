@@ -1,1 +1,1 @@
-# aerial-scene-recognition
+# multiclass-scene-recognition
